@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.linear_model import LogisticRegression
-from utils import split_corpus, DataSet, evaluate_multilabels
+from utils import split_corpus, SplitDataSet, evaluate_multilabels
 
 
 def train_classifiers(x_train: numpy.array, y_train: numpy.array) -> OneVsRestClassifier:
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean_sampled.jsonl'
 
     print('Loading corpus', corpus_file)
-    dataset: DataSet = split_corpus(corpus_file)
+    dataset: SplitDataSet = split_corpus(corpus_file)
 
     print('Predicting with label names')
     y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)

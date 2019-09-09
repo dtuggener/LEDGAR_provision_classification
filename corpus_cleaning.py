@@ -133,7 +133,7 @@ def get_outlier_labels(y, doc_ids, do_plot=False) -> Set[str]:
         plt.plot(label_counts_values[ix], label_doc_counts_values[ix], c='red', marker='o', fillstyle='none')
     pdb.set_trace()
     """
-    print(len(outliers), 'found')
+    print(len(outliers), 'outliers found')
     return set(outliers)
 
 

@@ -1,5 +1,4 @@
 import json
-import pdb
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -12,21 +11,20 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
 
-def label_stats(x, y, n=100):
+def label_stats(x, y, n=10):
     labels = [l for labels in y for l in labels]
     label_counts = Counter(labels)
-    print(len(label_counts), 'labels')
+    print(len(label_counts), 'labels,', len(x), 'provisions')
     for label, cnt in label_counts.most_common(n):
         print(label, cnt)
     ml = [(text, labels) for text, labels in zip(x, y) if len(labels) > 1]
     print('{} provisions with multilabels ({}%)'.format(len(ml), round(100*len(ml)/len(y), 2)))
-    pdb.set_trace()
 
 
 def provision_type_similarity(vecs_per_label, do_plot=False):
     """Pairwise similarity between averaged tf idf vectors of provisions sharing a label"""
     label_set = list(set(vecs_per_label.keys()))
-    pdb.set_trace()
+    breakpoint()
     avg_vecs = [numpy.mean(vecs_per_label[label], axis=0) for label in label_set]
     similar_labels = []
     dists = squareform(pdist(avg_vecs))
@@ -42,15 +40,16 @@ def provision_type_similarity(vecs_per_label, do_plot=False):
     return similar_labels
 
 
-def sample_frequent_labels(x, y, doc_ids, min_freq=None, n_labels=None):
+def sample_frequent_labels(x, y, doc_ids, min_freq=None, max_freq=None, n_labels=None):
     label_counts = Counter([l for labels in y for l in labels])
+    selected_labels = label_counts.copy()
 
     if min_freq:
-        selected_labels = {l for l, c in label_counts.items() if c >= min_freq}
-    elif n_labels:
-        selected_labels = {l for (l, _) in label_counts.most_common(n_labels)}
-
-    assert selected_labels, 'No label frequency criteria defined'
+        selected_labels = Counter({l: c for l, c in selected_labels.items() if c >= min_freq})
+    if max_freq:
+        selected_labels = Counter({l: c for l, c in selected_labels.items() if c <= max_freq})
+    if n_labels:
+        selected_labels = Counter({l: c for (l, c) in label_counts.most_common(n_labels)})
 
     x_small, y_small, doc_ids_small = [], [], []
     for provision, labels, doc_id in zip(x, y, doc_ids):
@@ -99,7 +98,7 @@ def plot_label_pca_means(x_tfidf, y):
     for vec, label in zip(pca, y):
         plt.scatter(vec[0], vec[1], label=label, c=label2color[label])
     plt.legend()
-    pdb.set_trace()
+    breakpoint()
 
 
 def get_provision_diversity(x_tfidf: numpy.array, y: List[List[str]]):
@@ -109,10 +108,10 @@ def get_provision_diversity(x_tfidf: numpy.array, y: List[List[str]]):
         if len(labels) > 1:
             continue  # omit multilabels
         labels2vecs[labels[0]].append(vec)
-    pdb.set_trace()
+    breakpoint()
     for label, vecs in labels2vecs.items():
         vecs = [v.toarray()[0] for v in vecs]
-        avg_dist = numpy.mean(pdist(vecs, metric='cosine'))
+        avg_dist = numpy.mean(pdist(numpy.array(vecs), metric='cosine'))
         div.append((avg_dist, label))
     div.sort()
     return div
@@ -125,6 +124,14 @@ def remove_stopwords(x):
         filt_toks = [w for w in word_tokenize(provision) if w.lower() not in stopWords]
         x_filt.append(' '.join(filt_toks))
     return x_filt
+
+
+def write_jsonl(out_file: str, x_small, y_small, doc_ids_small):
+    print('Writing output')
+    with open(out_file, 'w', encoding='utf8') as f:
+        for provision, labels, doc_id in zip(x_small, y_small, doc_ids_small):
+            json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
+            f.write('\n')
 
 
 if __name__ == '__main__':
@@ -144,17 +151,27 @@ if __name__ == '__main__':
 
     label_stats(x, y)
 
-    print('Sampling')
-    # Average no. of provisions per contract
-    avg_provisions = avg_provision_count(y, doc_ids)
-
-    # Sample most frequent labels
-    # x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, n_labels=20)
-
-    # Sample labels that occur in most contracts ~> a general provision inventory
-    x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_provisions)
-
+    print('Sampling most common provisions')
+    avg_provision_count = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
+    x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_provision_count)
     label_stats(x_small, y_small)
+    out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+    print('Sampling provisions with frequency >= 100')
+    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=100)
+    label_stats(x_small, y_small)
+    out_file = corpus_file.replace('.jsonl', '_common.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+    print('Sampling sparse labels with 10 <= frequency <= 20')
+    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=10, max_freq=20)
+    label_stats(x_small, y_small)
+    out_file = corpus_file.replace('.jsonl', '_sparse.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+    # similar_labels = provision_type_similarity(vecs_per_label)
+    """
 
     print('Removing stopwords')
     x_small = remove_stopwords(x_small)
@@ -172,32 +189,4 @@ if __name__ == '__main__':
     # TODO
     # similarity of selected provisions
     # avg. length of provisions, no. of labels, no. of provisions per label ...
-
-    print('Writing output')
-    with open(corpus_file.replace('.jsonl', '_sampled.jsonl'), 'w', encoding='utf8') as f:
-        for provision, labels, doc_id in zip(x_small, y_small, doc_ids_small):
-            json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
-            f.write('\n')
-
-    """
-    
-    
-    # doesn't work for large data sets (oov
-    x_tfidf = TfidfVectorizer(sublinear_tf=True).fit_transform(x).toarray()
-
-    # plot_label_pca(x_tfidf, y)
-
-    vecs_per_label, segs_per_label = defaultdict(list), defaultdict(list)
-    for seg, seg_vec, labels in zip(x, x_tfidf, y):
-        # skip multilabels
-        if len(labels) > 1:
-            continue
-        label = labels[0]
-        vecs_per_label[label].append(seg_vec)
-        segs_per_label[label].append(seg)
-
-    div = get_provision_diversity(vecs_per_label)
-    pdb.set_trace()
-
-    # similar_labels = provision_type_similarity(vecs_per_label)
     """

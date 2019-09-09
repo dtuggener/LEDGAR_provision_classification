@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 
 @dataclass
-class DataSet:
+class SplitDataSet:
     x_train: List[str]
     y_train: List[List[str]]
     x_test: List[str]
@@ -17,7 +17,7 @@ class DataSet:
 
 def split_corpus(corpus_file: str, use_dev: bool = True,
                  test_size: float = 0.2, dev_size: Union[float, None] = 0.1,
-                 random_state: int = 42) -> DataSet:
+                 random_state: int = 42) -> SplitDataSet:
     x: List[str] = []
     y: List[List[str]] = []
     doc_ids: List[str] = []
@@ -38,7 +38,7 @@ def split_corpus(corpus_file: str, use_dev: bool = True,
     else:
         x_dev, y_dev = None, None
 
-    dataset = DataSet(x_train, y_train, x_test, y_test, x_dev, y_dev)
+    dataset = SplitDataSet(x_train, y_train, x_test, y_test, x_dev, y_dev)
     return dataset
 
 
