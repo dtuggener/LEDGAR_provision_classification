@@ -81,7 +81,7 @@ if __name__ == '__main__':
     dataset: DataSet = split_corpus(corpus_file)
 
     print('Predicting with label names')
-    y_preds_labelnames = classify_by_labelname(dataset.x_train, dataset.y_train)
+    y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
     evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
 
     print('Vectorizing')
