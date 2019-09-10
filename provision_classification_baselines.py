@@ -1,4 +1,5 @@
 import numpy; numpy.random.seed(42)
+import pickle
 from typing import List, Dict, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multiclass import OneVsRestClassifier
@@ -75,14 +76,14 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
 
 if __name__ == '__main__':
-    corpus_file = 'sec_corpus_2016-2019_clean_sampled.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
 
     print('Predicting with label names')
-    y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
-    evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
+    # y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
+    # evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
 
     print('Vectorizing')
     tfidfizer = TfidfVectorizer(sublinear_tf=True)
@@ -94,7 +95,8 @@ if __name__ == '__main__':
 
     print('Training LogReg')
     classifier = train_classifiers(x_train_vecs, y_train_vecs)
-
     y_preds_lr, _ = tune_clf_thresholds(x_test_vecs, dataset.y_test, classifier, mlb)
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
+    with open('/tmp/' + corpus_file.replace('.json', '_clf.pkl'), 'wb') as f:
+        pickle.dump(classifier, f)

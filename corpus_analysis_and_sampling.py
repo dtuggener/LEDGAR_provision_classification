@@ -11,10 +11,10 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
 
-def label_stats(x, y, n=10):
+def label_stats(x, y, doc_ids, n=10):
     labels = [l for labels in y for l in labels]
     label_counts = Counter(labels)
-    print(len(label_counts), 'labels,', len(x), 'provisions')
+    print(len(label_counts), 'labels,', len(x), 'provisions', len(set(doc_ids)), 'contracts')
     for label, cnt in label_counts.most_common(n):
         print(label, cnt)
     ml = [(text, labels) for text, labels in zip(x, y) if len(labels) > 1]
@@ -134,6 +134,55 @@ def write_jsonl(out_file: str, x_small, y_small, doc_ids_small):
             f.write('\n')
 
 
+def create_subcorpora(x, y, doc_ids):
+    print('Sampling most common provisions')
+    avg_prov_cnt = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
+    x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_prov_cnt)
+    label_stats(x_small, y_small, doc_ids_small)
+    breakpoint()
+    out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+    print('Sampling provisions with frequency >= 100')
+    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=100)
+    label_stats(x_small, y_small, doc_ids_small)
+    out_file = corpus_file.replace('.jsonl', '_freq100.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+    print('Sampling sparse labels with 10 <= frequency <= 20')
+    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=10, max_freq=20)
+    label_stats(x_small, y_small, doc_ids_small)
+    out_file = corpus_file.replace('.jsonl', '_sparse.jsonl')
+    write_jsonl(out_file, x_small, y_small, doc_ids_small)
+
+
+def incremental_label_stats(x, y, doc_ids):
+    for i in [0, 10, 50, 100, 500, 1000, 5000]:
+        print(i)
+        x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=i)
+        label_stats(x_small, y_small, doc_ids_small, n=0)
+
+
+def label_cooc(y, doc_ids):
+    labels2docs = defaultdict(set)
+    for labels, doc_id in zip(y, doc_ids):
+        for label in labels:
+            labels2docs[label].add(doc_id)
+    labels2docs = {l: list(v) for l, v in labels2docs.items()}
+    label_list = list(labels2docs.keys())
+
+    similarities = []
+    for i, l1 in enumerate(label_list):
+        print('\r', i, end='', flush=True)
+        # make this faster with cdist?
+        for l2 in label_list[i+1:]:
+            breakpoint()
+            jacc_sim = l1.intersection(l2) / l1.union(l2)
+            similarities.append((jacc_sim, l1, l2))
+    breakpoint()
+    similarities.sort(reverse=True)
+
+
 if __name__ == '__main__':
 
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
@@ -149,28 +198,14 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
-    label_stats(x, y)
-
-    print('Sampling most common provisions')
-    avg_provision_count = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
-    x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_provision_count)
-    label_stats(x_small, y_small)
-    out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
-    write_jsonl(out_file, x_small, y_small, doc_ids_small)
-
-    print('Sampling provisions with frequency >= 100')
-    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=100)
-    label_stats(x_small, y_small)
-    out_file = corpus_file.replace('.jsonl', '_common.jsonl')
-    write_jsonl(out_file, x_small, y_small, doc_ids_small)
-
-    print('Sampling sparse labels with 10 <= frequency <= 20')
-    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=10, max_freq=20)
-    label_stats(x_small, y_small)
-    out_file = corpus_file.replace('.jsonl', '_sparse.jsonl')
-    write_jsonl(out_file, x_small, y_small, doc_ids_small)
-
+    label_stats(x, y, doc_ids)
+    # incremental_label_stats(x, y, doc_ids)
+    # create_subcorpora(x, y, doc_ids)
     # similar_labels = provision_type_similarity(vecs_per_label)
+    label_cooc(y, doc_ids)
+    # TODO calculate label similarity by shared document occurrence (i.e. using jaccard distance);
+    #  cluster similar labels to obtain somehting like contract type-based view on provisions
+
     """
 
     print('Removing stopwords')
