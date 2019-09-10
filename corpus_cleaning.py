@@ -111,7 +111,7 @@ def get_outlier_labels(y, doc_ids, do_plot=False) -> Set[str]:
         for label in outliers:
             ix = label_set.index(label)
             plt.plot(label_counts_values[ix], label_doc_counts_values[ix], c='red', marker='o', fillstyle='none')
-        plt.savefig('/tmp/label_outliers.png')
+        plt.savefig('label_outliers.pdf')
 
     """
     from sklearn.svm import SVR

@@ -181,9 +181,23 @@ def label_cooc(y, doc_ids):
     similarities.sort(reverse=True)
 
 
+def plot_label_name_vs_freq(y):
+    label_list = [l for labels in y for l in labels]
+    label_counts_counter = Counter(label_list)
+    name_lengths = []
+    label_counts = []
+    for label, cnt in label_counts_counter.most_common():
+        label_counts.append(cnt)
+        name_lengths.append(label.count(' ') + 1)
+    plt.scatter(label_counts, name_lengths, marker='+', c='black')
+    plt.xlabel('Label frequency')
+    plt.ylabel('Label token count')
+    plt.savefig('label_name_length_vs_freq.pdf')
+
+
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
 
     x: List[str] = []
     y: List[List[str]] = []
@@ -197,13 +211,13 @@ if __name__ == '__main__':
         doc_ids.append(labeled_provision['source'])
 
     label_stats(x, y, doc_ids, n=0)
+    # plot_label_name_vs_freq(y)
     # incremental_label_stats(x, y, doc_ids)
     # create_subcorpora(x, y, doc_ids)
     # similar_labels = provision_type_similarity(vecs_per_label)
     # label_cooc(y, doc_ids)
 
     """
-
     print('Removing stopwords')
     x_small = remove_stopwords(x_small)
 
