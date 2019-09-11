@@ -55,6 +55,9 @@ def process_text(text: str) -> Union[str, None]:
     if not text[0].isupper() and not text[0] in ['(', '[']:
         return None
 
+    if not text[-1] == '.':
+        return None
+
     text = re.sub('[ \t]+', ' ', text.replace('\n', ' ').strip())
 
     return text

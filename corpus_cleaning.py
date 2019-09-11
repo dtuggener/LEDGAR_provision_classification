@@ -113,45 +113,28 @@ def get_outlier_labels(y, doc_ids, do_plot=False) -> Set[str]:
             plt.plot(label_counts_values[ix], label_doc_counts_values[ix], c='red', marker='o', fillstyle='none')
         plt.savefig('label_outliers.pdf')
 
-    """
-    from sklearn.svm import SVR
-    svr= SVR(kernel='rbf', C=100, gamma=0.1, epsilon=.1)
-    svr.fit(label_counts_values.reshape(-1, 1), label_doc_counts_values)
-    svr_pred = svr.predict(label_counts_values.reshape(-1, 1))
-
-    svr_dists = []
-    for label, dc, pdc in zip(label_set, label_doc_counts_values, svr_pred):
-        dist = (pdc - dc) / (dc/max_dc)
-        svr_dists.append((dist, label))
-    svr_dists.sort(reverse=True)
-    std_dist_svr = numpy.std([d[0] for d in dists])
-    svr_outliers = [(dist, label) for (dist, label) in svr_dists if dist > std_dist_svr]
-    plt.scatter(label_counts_values, label_doc_counts_values, marker='+')
-    plt.scatter(label_counts_values, svr_pred, c='red', marker='x')
-    for _, label in svr_outliers:
-        ix = label_set.index(label)
-        plt.plot(label_counts_values[ix], label_doc_counts_values[ix], c='red', marker='o', fillstyle='none')
-    pdb.set_trace()
-    """
     print(len(outliers), 'outliers found')
     return set(outliers)
 
 
-def remove_lowfreq_labels(x, y, doc_ids, min_freq: int = 2):
+def identify_lowfreq_labels(x, y, doc_ids, min_freq: int = None, min_doc_freq: int = None):
     """Remove labels with low frequency"""
-    print('Removing low-frequency labels')
-    label_counts = Counter(l for labels in y for l in labels)
-    filt_x, filt_y, filt_doc_ids = [], [], []
-    for provision, labels, doc_id in zip(x, y, doc_ids):
-        filt_labels = []
-        for label in labels:
-            if label_counts[label] >= min_freq:
-                filt_labels.append(label)
-        if filt_labels:
-            filt_x.append(provision)
-            filt_y.append(filt_labels)
-            filt_doc_ids.append(doc_id)
-    return filt_x, filt_y, filt_doc_ids
+    print('Identifying low-frequency labels')
+    if min_freq:
+        label_counts = Counter(l for labels in y for l in labels)
+        lowfreq_labels = {l for l, c in label_counts.items() if c < min_freq}
+
+    elif min_doc_freq:
+        labels2docs = defaultdict(set)
+        for labels, doc_id in zip(y, doc_ids):
+            for label in labels:
+                labels2docs[label].add(doc_id)
+        lowfreq_labels = {l for l, ds in labels2docs.items() if len(ds) < min_doc_freq}
+
+    else:
+        lowfreq_labels = set()
+
+    return lowfreq_labels
 
 
 def remove_labels(x, y, doc_ids, drop_labels: Set[str]):
@@ -178,7 +161,7 @@ if __name__ == '__main__':
     y: List[List[str]] = []
     doc_ids: List[str] = []
 
-    print('Loading data')
+    print('Loading data from', corpus_file)
     for line in open(corpus_file):
         labeled_provision = json.loads(line)
         x.append(labeled_provision['provision'])
@@ -188,10 +171,12 @@ if __name__ == '__main__':
     x, y, doc_ids = unique_data(x, y, doc_ids)
     y = split_conjuncted_labels(y)
     y = merge_plural_label_names(y)
-    x, y, doc_ids = remove_lowfreq_labels(x, y, doc_ids)
+    breakpoint()
+    lowfreq_labels = identify_lowfreq_labels(x, y, doc_ids, min_doc_freq=5)
+    x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=lowfreq_labels)
 
     outlier_labels = get_outlier_labels(y, doc_ids, do_plot=True)
-    x, y, doc_ids = remove_labels(x, y, doc_ids, outlier_labels)
+    x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=outlier_labels)
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_clean.jsonl'), 'w',  encoding='utf8') as f:
