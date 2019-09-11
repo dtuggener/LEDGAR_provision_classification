@@ -52,20 +52,21 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
                     # TODO this leads to funky business, bug fix it before uncommenting
                     # ngram_node = map2original_label.get(ngram, ngram)
                     # ngram2_node = map2original_label.get(ngram2, ngram2)
-                    g.add_edge(ngram, ngram2)
+                    # g.add_edge(ngram, ngram2)
+                    g.add_edge(tuple2label.get(ngram, ngram), tuple2label.get(ngram2, ngram2))
 
     # Tag nodes wrt to source, either observed or synthetic labels
     real_labels = dict()
+    label2tuple = Counter({l: t for t, l in tuple2label.items()})
     for node in g.nodes():
-        real_labels[node] = True if node in tuple2label else False
+        real_labels[node] = True if node in label2tuple else False
     nx.set_node_attributes(g, real_labels, 'real_label')
     nx.set_node_attributes(g, ngram_counts, 'weight')
 
     # Add frequency of (synthetic) labels as weights
     label_counts = Counter([l for labels in y for l in labels])
-    label2tuple = Counter({l: t for t, l in tuple2label.items()})
-    tuple_counts = {label2tuple[l]: c for l, c in label_counts.items()}
-    nx.set_node_attributes(g, tuple_counts, 'weight')
+    # tuple_counts = {label2tuple[l]: c for l, c in label_counts.items()}
+    nx.set_node_attributes(g, label_counts, 'weight')
 
     return g
 
@@ -141,7 +142,6 @@ if __name__ == '__main__':
     roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
     real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
     breakpoint()
-    # TODO get label count, label2tuple, tuple2label from somewhere, don't recalculate all the time...
 
     # TODO: allow splitting of lowfreq label names (f<25 or f<50) into sufficiently frequent constituents;
     #  e.g. 'violation of environmental law' -> 'violation'; 'environmental law'
