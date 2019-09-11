@@ -5,7 +5,7 @@ from nltk.corpus import stopwords
 from collections import defaultdict, Counter
 
 
-def get_label_hierarchy(y):
+def label_hierarchy_graph(y) -> nx.DiGraph:
 
     def get_ngrams(words):
         for i in range(len(words) + 1):
@@ -43,43 +43,46 @@ def get_label_hierarchy(y):
                     # ngram2_node = map2original_label.get(ngram2, ngram2)
                     g.add_edge(ngram, ngram2)
 
+    # Tag nodes wrt to source, either observed or synthetic labels
     real_labels = dict()
     for node in g.nodes():
         real_labels[node] = True if node in map2original_label else False
-        # real_labels[node] = True if node in map2original_label.values() else False
     nx.set_node_attributes(g, real_labels, 'real_label')
     nx.set_node_attributes(g, ngram_counts, 'weight')
-    breakpoint()
-    nx.write_gexf(g, 'label_hierarchy.gexf')
-    # TODO prune the tree, i.e. remove path parts consisting of non-real labels only;
-    #  check for all parents if they share a parent with the child, then remove edge between child and parent's parent
-    # access immediate children
-    # g.predecessors(('environmental','laws'))
-    # access immediate parent
-    # g.successors(('environmental','laws'))
 
-    """
-    # Prune ngrams with frequency 1, they don't have children
-    ngram_counts_pruned = Counter({ngram: cnt for ngram, cnt in ngram_counts.most_common() if cnt > 1})
-    
-    # For each label, get its parents, i.e. from ngram_counts_pruned
-    for ix, label_words in enumerate(label_words_list):
-        if len(label_words) > 1:
-            compounds = Counter()
-            for ngram in get_ngrams(label_words):
-                if ngram_counts_pruned[ngram] > 0:
-                    compounds[ngram] = ngram_counts_pruned[ngram]
-            print(label_words, compounds)
-            breakpoint()
-            # TODO populate graph;
-            #  add parents with least counts / longest label name as parent; add others as grandparents?
-        else:
-            g.add_node(label_words[0])
-    """
+    return g
 
-    # TODO: find labels that don't have multiple parents -> merge??!!!
-    # TODO: allow splitting of lowfreq label names into sufficiently frequent constituents;
-    #  e.g. 'violation of environmental laws' -> 'violation'; 'environmental laws'
+
+def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
+    while True:
+        old_edge_count, old_node_count = len(g.edges()), len(g.nodes())
+        # Remove edges to grandparents
+        del_edges = []
+        for node in g.nbunch_iter():
+            neighbors = list(g.successors(node))
+            for neighbor in neighbors:
+                neighbor_neighbors = list(g.successors(neighbor))
+                shared_neighbors = [n for n in neighbor_neighbors if n in neighbors]
+                if shared_neighbors:
+                    # Remove edges from node to shared neighbors
+                    for shared_neighbor in shared_neighbors:
+                        del_edges.append((node, shared_neighbor))
+        g.remove_edges_from(del_edges)
+
+        # Remove synthetic nodes with only one predecessor;
+        # link predecessor to successors directly
+        single_successors_synthetic_nodes = [n for n in g.nbunch_iter() if len(list(g.predecessors(n))) == 1
+                                             and not g.nodes()[n]['real_label']]
+        for node in single_successors_synthetic_nodes:
+            child = list(g.predecessors(node))[0]
+            parents = list(g.successors(node))
+            if parents:
+                for parent in parents:
+                    g.add_edge(child, parent)
+            g.remove_node(node)
+        if len(g.edges()) == old_edge_count and len(g.nodes()) == old_node_count:
+            break
+    return g
 
 
 if __name__ == '__main__':
@@ -97,4 +100,17 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
-    get_label_hierarchy(y)
+    graph = label_hierarchy_graph(y)
+    breakpoint()
+    graph = prune_graph(graph)
+    nx.write_gexf(graph, 'label_hierarchy.gexf')
+    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
+    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+
+    # TODO prune the tree, i.e. remove path parts consisting of non-real labels only
+    # access immediate children
+    # g.predecessors(('environmental','laws'))
+    # access immediate parent
+    # g.successors(('environmental','laws'))
+    # TODO: allow splitting of lowfreq label names into sufficiently frequent constituents;
+    #  e.g. 'violation of environmental laws' -> 'violation'; 'environmental laws'
