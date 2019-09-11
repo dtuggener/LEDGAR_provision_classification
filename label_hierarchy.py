@@ -3,31 +3,39 @@ import networkx as nx
 from typing import List
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
-from spacy.lemmatizer import Lemmatizer
-from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
+
+
+def get_ngrams(words):
+    for i in range(len(words) + 1):
+        for j in range(i, len(words[i:]) + 1):
+            ngram = words[i:i + j]
+            if ngram:
+                yield tuple(ngram)
 
 
 def label_hierarchy_graph(y) -> nx.DiGraph:
 
-    def get_ngrams(words):
-        for i in range(len(words) + 1):
-            for j in range(i, len(words[i:]) + 1):
-                ngram = words[i:i + j]
-                if ngram:
-                    yield tuple(ngram)
-
-    stop_words = set(stopwords.words('english'))
-    lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
     label_list = list(set([l for labels in y for l in labels]))
+
+    # Determine singular forms
+    token_set = set([l for label in label_list for l in label.split(' ')])
+    base_forms = dict()
+    for token in token_set:
+        if token.endswith('s') and token[:-1] in token_set:
+            base_forms[token] = token[:-1]
+        elif token.endswith('ies') and token[:-3] + 'y' in token_set:
+            base_forms[token] = token[:-3] + 'y'
+
     label_words_list = []
-    map2original_label = dict()
+    tuple2label = dict()
+    stop_words = set(stopwords.words('english'))
     for label in label_list:
         # represent label words as sorted bag-of-words tuples to store as keys
-        lemmas = [lemmatizer(w, 'NOUN')[0] for w in label.split(' ')]
+        lemmas = [base_forms.get(w, w) for w in label.split(' ')]
         lemmas = tuple(sorted([w for w in lemmas if w not in stop_words]))
         # words = tuple(sorted([w for w in label.split(' ') if w not in stop_words]))
         label_words_list.append(lemmas)
-        map2original_label[lemmas] = label
+        tuple2label[lemmas] = label
 
     ngram_counts = Counter()
     for words in label_words_list:
@@ -49,9 +57,15 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
     # Tag nodes wrt to source, either observed or synthetic labels
     real_labels = dict()
     for node in g.nodes():
-        real_labels[node] = True if node in map2original_label else False
+        real_labels[node] = True if node in tuple2label else False
     nx.set_node_attributes(g, real_labels, 'real_label')
     nx.set_node_attributes(g, ngram_counts, 'weight')
+
+    # Add frequency of (synthetic) labels as weights
+    label_counts = Counter([l for labels in y for l in labels])
+    label2tuple = Counter({l: t for t, l in tuple2label.items()})
+    tuple_counts = {label2tuple[l]: c for l, c in label_counts.items()}
+    nx.set_node_attributes(g, tuple_counts, 'weight')
 
     return g
 
@@ -88,6 +102,23 @@ def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
     return g
 
 
+def create_subgraph(graph: nx.DiGraph):
+    root_node = ('request',)
+    root_node2 = ('borrowing',)
+    children = nx.ancestors(graph, root_node)
+    children.add(root_node)
+    children2 = nx.ancestors(graph, root_node2)
+    children2.add(root_node2)
+    all_children = children.union(children2)
+    sg = nx.subgraph(graph, all_children)
+    nx.write_gexf(sg, 'label_hierarchy_sg.gexf')
+    """
+    import matplotlib.pyplot as plt
+    nx.draw_networkx(sg)
+    plt.show()
+    """
+
+
 if __name__ == '__main__':
 
     # corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
@@ -105,11 +136,12 @@ if __name__ == '__main__':
         doc_ids.append(labeled_provision['source'])
 
     graph = label_hierarchy_graph(y)
-    breakpoint()
     graph = prune_graph(graph)
     nx.write_gexf(graph, 'label_hierarchy.gexf')
     roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
     real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+    breakpoint()
+    # TODO get label count, label2tuple, tuple2label from somewhere, don't recalculate all the time...
 
-    # TODO: allow splitting of lowfreq label names into sufficiently frequent constituents;
-    #  e.g. 'violation of environmental laws' -> 'violation'; 'environmental laws'
+    # TODO: allow splitting of lowfreq label names (f<25 or f<50) into sufficiently frequent constituents;
+    #  e.g. 'violation of environmental law' -> 'violation'; 'environmental law'
