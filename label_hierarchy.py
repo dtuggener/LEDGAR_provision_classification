@@ -3,6 +3,8 @@ import networkx as nx
 from typing import List
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
+from spacy.lemmatizer import Lemmatizer
+from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 
 
 def label_hierarchy_graph(y) -> nx.DiGraph:
@@ -14,17 +16,18 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
                 if ngram:
                     yield tuple(ngram)
 
-    # TODO stemming, or at least remove plural-S from label words;
-    #  better: do full lemmatization (spaCy)?
     stop_words = set(stopwords.words('english'))
+    lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
     label_list = list(set([l for labels in y for l in labels]))
     label_words_list = []
     map2original_label = dict()
     for label in label_list:
         # represent label words as sorted bag-of-words tuples to store as keys
-        words = tuple(sorted([w for w in label.split(' ') if w not in stop_words]))
-        label_words_list.append(words)
-        map2original_label[words] = label
+        lemmas = [lemmatizer(w, 'NOUN')[0] for w in label.split(' ')]
+        lemmas = tuple(sorted([w for w in lemmas if w not in stop_words]))
+        # words = tuple(sorted([w for w in label.split(' ') if w not in stop_words]))
+        label_words_list.append(lemmas)
+        map2original_label[lemmas] = label
 
     ngram_counts = Counter()
     for words in label_words_list:
@@ -87,6 +90,7 @@ def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
 
 if __name__ == '__main__':
 
+    # corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
     print('Loading data from', corpus_file)
 
@@ -107,10 +111,5 @@ if __name__ == '__main__':
     roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
     real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
 
-    # TODO prune the tree, i.e. remove path parts consisting of non-real labels only
-    # access immediate children
-    # g.predecessors(('environmental','laws'))
-    # access immediate parent
-    # g.successors(('environmental','laws'))
     # TODO: allow splitting of lowfreq label names into sufficiently frequent constituents;
     #  e.g. 'violation of environmental laws' -> 'violation'; 'environmental laws'
