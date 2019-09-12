@@ -138,7 +138,6 @@ def create_subcorpora(x, y, doc_ids):
     avg_prov_cnt = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
     x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_prov_cnt)
     label_stats(x_small, y_small, doc_ids_small)
-    breakpoint()
     out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
     write_jsonl(out_file, x_small, y_small, doc_ids_small)
 
@@ -203,7 +202,7 @@ if __name__ == '__main__':
     y: List[List[str]] = []
     doc_ids: List[str] = []
 
-    print('Loading data')
+    print('Loading data from', corpus_file)
     for line in open(corpus_file):
         labeled_provision = json.loads(line)
         x.append(labeled_provision['provision'])
@@ -213,7 +212,7 @@ if __name__ == '__main__':
     label_stats(x, y, doc_ids, n=0)
     # plot_label_name_vs_freq(y)
     # incremental_label_stats(x, y, doc_ids)
-    # create_subcorpora(x, y, doc_ids)
+    create_subcorpora(x, y, doc_ids)
     # similar_labels = provision_type_similarity(vecs_per_label)
     # label_cooc(y, doc_ids)
 

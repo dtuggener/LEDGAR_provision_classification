@@ -171,7 +171,6 @@ if __name__ == '__main__':
     x, y, doc_ids = unique_data(x, y, doc_ids)
     y = split_conjuncted_labels(y)
     y = merge_plural_label_names(y)
-    breakpoint()
     lowfreq_labels = identify_lowfreq_labels(x, y, doc_ids, min_doc_freq=5)
     x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=lowfreq_labels)
 

@@ -48,13 +48,16 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
 
     print('Populating graph')
     g = nx.DiGraph()
+    """
     ngrams = sorted(ngram_counts.keys(), key=len, reverse=True)
     breakpoint()
+    ngram_lengths = defaultdict(list)
+    for ngram in ngrams:  # Bucket ngrams by lengths for faster comparison
+        ngram_lengths[len(ngram)].append(ngram)
+    """
     for i, ngram in enumerate(ngrams):   # Start with long ngrams, find parent
         print(str(i) + '\r', end='', flush=True)
         ngram_set = set(ngram)
-        # TODO could speed this up by creating separate lists regarding length;
-        #  only check lists with shorter ngrams
         for ngram2 in ngrams[i+1:]:
             if len(ngram2) < len(ngram):  # Parent can't have longer name than child
                 if set(ngram2).issubset(ngram_set):  # Child contains all words of parent
@@ -143,10 +146,4 @@ if __name__ == '__main__':
     graph = label_hierarchy_graph(y)
     print('Pruning graph')
     graph = prune_graph(graph)
-    nx.write_gexf(graph, 'label_hierarchy.gexf')
-    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
-    breakpoint()
-
-    # TODO: allow splitting of lowfreq label names (f<25 or f<50) into sufficiently frequent constituents;
-    #  e.g. 'violation of environmental law' -> 'violation'; 'environmental law'
+    nx.write_gexf(graph, corpus_file.replace('.jsonl', '_label_hierarchy.gexf'))
