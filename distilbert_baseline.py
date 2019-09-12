@@ -33,7 +33,7 @@ def set_seed(seed):
 
 def train(train_dataset, model):
     # TODO: magic numbers, defaults in run_glue.py
-    batch_size = 8
+    batch_size = 32
     n_epochs = 3
     weight_decay = 0.0
     learning_rate = 5e-5
@@ -197,7 +197,8 @@ def main():
     print(classification_report(
         y_true=prediction_data['true_ids'],
         y_pred=prediction_data['pred_ids'],
-        labels=don_data.all_lbls,
+        labels=list(range(len(don_data.all_lbls))),
+        target_names=don_data.all_lbls,
     ))
 
 
