@@ -203,12 +203,10 @@ if __name__ == '__main__':
 
     data_dir = '/home/don/resources/sec_crawler/data/'
     out_dir = './'
-    max_contracts = 10000
 
     # provisions = scrape_random_contracts(data_dir, max_contracts=max_contracts)
     provisions = scrape_by_year(data_dir, years=range(2019, 2015, -1))
 
-    # outfile = os.path.join(out_dir, 'sec_corpus_' + str(max_contracts) + '.jsonl')
     outfile = os.path.join(out_dir, 'sec_corpus_2016-2019.jsonl')
     with open(outfile, 'w', encoding='utf8') as f:
         for provision in provisions:

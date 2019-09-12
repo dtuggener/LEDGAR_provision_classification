@@ -2,7 +2,6 @@ import json
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import networkx as nx
 from typing import List
 from collections import defaultdict, Counter
 from scipy.spatial.distance import pdist, squareform
@@ -139,7 +138,6 @@ def create_subcorpora(x, y, doc_ids):
     avg_prov_cnt = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
     x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_prov_cnt)
     label_stats(x_small, y_small, doc_ids_small)
-    breakpoint()
     out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
     write_jsonl(out_file, x_small, y_small, doc_ids_small)
 
@@ -182,65 +180,29 @@ def label_cooc(y, doc_ids):
     similarities.sort(reverse=True)
 
 
-def analyse_labelnames(y):
-    # TODO stemming, or at least remove plural-S from label words!
-    label_list = list(set([l for labels in y for l in labels]))
-    word_counts = Counter()
-    singleton_word_counts = Counter()  # Labels with only one word
-    word_cooc = defaultdict(lambda: Counter())
-    stop_words = set(stopwords.words('english'))
-    for label in label_list:
-        words = [w for w in label.split(' ') if w not in stop_words]
-        if len(words) == 1:
-            singleton_word_counts[words[0]] += 1
-        else:
-            # TODO do proper frequent itemset mining
-            for i, word in enumerate(words):
-                word_counts[word] += 1
-                for word2 in words[i+1:]:
-                    word_cooc[word][word2] += 1
-                    word_cooc[word2][word] += 1
-
-    g = nx.DiGraph()
-    # TODO distinguish between real labels nodes and merge/parent nodes
-    # find frequently co-occurring label words;
-    # i.e those with freq>1: i.e. they have more than one child and thus are suited parents
-    for w1, coocs in word_cooc.items():
-        for w2, cnt in coocs.items():
-            if cnt > 1:
-                merged_w = ' '.join(sorted((w1, w2)))
-                if merged_w not in g.nodes():
-                    g.add_edge(merged_w, w1)
-                    g.add_edge(merged_w, w2)
-                # find all labels that have both words
-                children = [l for l in label_list if w1 in l and w2 in l]
-                for child in children:
-                    g.add_edge(child, merged_w)
-
-    breakpoint()
-    nx.write_gexf(g, '/tmp/label_hierarchy.gexf')
-    parents = set([l for l, c in word_counts.most_common() if c > 1])
-    for label in label_list:
-        words = label.split(' ')
-        if len(words) > 1:
-            label_parents = {p for p in parents if p in words}
-            for lp in label_parents:
-                g.add_edge(label, lp)
-
-    # TODO: find labels that don't have multiple parents -> merge??!!!
-    # TODO: allow splitting of lowfreq label names into sufficiently frequent constituents;
-    #  e.g. 'violation of environmental laws' -> 'violation'; 'environmental laws'
+def plot_label_name_vs_freq(y):
+    label_list = [l for labels in y for l in labels]
+    label_counts_counter = Counter(label_list)
+    name_lengths = []
+    label_counts = []
+    for label, cnt in label_counts_counter.most_common():
+        label_counts.append(cnt)
+        name_lengths.append(label.count(' ') + 1)
+    plt.scatter(label_counts, name_lengths, marker='+', c='black')
+    plt.xlabel('Label frequency')
+    plt.ylabel('Label token count')
+    plt.savefig('label_name_length_vs_freq.pdf')
 
 
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
 
     x: List[str] = []
     y: List[List[str]] = []
     doc_ids: List[str] = []
 
-    print('Loading data')
+    print('Loading data from', corpus_file)
     for line in open(corpus_file):
         labeled_provision = json.loads(line)
         x.append(labeled_provision['provision'])
@@ -248,14 +210,13 @@ if __name__ == '__main__':
         doc_ids.append(labeled_provision['source'])
 
     label_stats(x, y, doc_ids, n=0)
-    analyse_labelnames(y)
+    # plot_label_name_vs_freq(y)
     # incremental_label_stats(x, y, doc_ids)
-    # create_subcorpora(x, y, doc_ids)
+    create_subcorpora(x, y, doc_ids)
     # similar_labels = provision_type_similarity(vecs_per_label)
     # label_cooc(y, doc_ids)
 
     """
-
     print('Removing stopwords')
     x_small = remove_stopwords(x_small)
 
