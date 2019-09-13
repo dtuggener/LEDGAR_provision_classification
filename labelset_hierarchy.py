@@ -3,31 +3,6 @@ import networkx as nx
 from typing import List, Set
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
-import spacy
-
-nlp = spacy.load("en_core_web_sm")
-
-
-def labels2graph(y):
-    g = nx.DiGraph()
-    label_counts = Counter({l for labels in y for l in labels})
-    nlp = spacy.load("en_core_web_sm")
-    for label, cnt in label_counts.items():
-        parse = nlp(label)
-        if len(parse) > 1:
-            print(label)
-            # just serialize and iteratively add each token as parent node; resulting in an path to the head noun?
-            for token in parse:
-                print(token.text, token.lemma_, token.dep_, token.pos_)
-                """
-                for nchunk in parse.noun_chunks:
-                    print(nchunk, nchunk.root.text)
-                    for token in nchunk:
-                        print(token, token.dep_)
-                """
-            breakpoint()
-        else:
-            g.add_node(label, weight=label_counts[label])
 
 
 def get_ngrams(words):
@@ -59,9 +34,11 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
     print('Lemmatizing labels and counting ngrams')
     ngram_counts = Counter()
     label_set_lemmas = set()
+    label2lemma = dict()
     stop_words = set(stopwords.words('english'))
     for label in label_list:
         lemmas = tuple([base_forms.get(w, w) for w in label.split(' ')])
+        label2lemma[label] = lemmas
         label_set_lemmas.add(lemmas)
         for ngram in get_ngrams(lemmas):
             if ngram == label:
@@ -97,8 +74,9 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
 
     real_labels = {l: True if l in label_set_lemmas else False for l in ngram_counts.keys()}
     nx.set_node_attributes(g, real_labels, 'real_label')
-    # TODO add label counts instead of ngram counts!
-    nx.set_node_attributes(g, ngram_counts, 'weight')
+    label_counts = Counter(l for labels in y for l in labels)
+    label_counts_lemmas = {label2lemma[l]: c for l, c in label_counts.items()}
+    nx.set_node_attributes(g, label_counts_lemmas, 'weight')
     return g
 
 
@@ -152,25 +130,31 @@ def create_subgraph(graph: nx.DiGraph):
     """
 
 
+def add_ancestor_support(g):
+    for node in g.nodes():
+        ancestor_support = sum([g.nodes()[anc].get('weight', 0) for anc in nx.ancestors(graph, node)])
+        g.nodes()[node]['ancestor support'] = ancestor_support
+    return g
+
+
 if __name__ == '__main__':
 
-    # corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
+    # corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
     print('Loading data from', corpus_file)
 
-    x: List[str] = []
     y: List[List[str]] = []
-    doc_ids: List[str] = []
 
     for line in open(corpus_file):
         labeled_provision = json.loads(line)
-        x.append(labeled_provision['provision'])
         y.append(labeled_provision['label'])
-        doc_ids.append(labeled_provision['source'])
 
     graph = label_hierarchy_graph(y)
     graph_pruned = prune_graph(graph)
+    graph = add_ancestor_support(graph)
+
     nx.write_gexf(graph, corpus_file.replace('.jsonl', '_label_hierarchy.gexf'))
+
     roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
     real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
     breakpoint()
