@@ -1,7 +1,19 @@
 import networkx as nx
 
+
+def create_subgraph(graph: nx.DiGraph, root_node, direction='descendants'):
+    if direction == 'descendants':
+        children = nx.descendants(graph, root_node)
+    else:
+        children = nx.ancestors(graph, root_node)
+    children.add(root_node)
+    sg = nx.subgraph(graph, children)
+    nx.write_gexf(sg, '/tmp/label_hierarchy_sg.gexf')
+    return sg
+
+
 if __name__ == '__main__':
-    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_label_hierarchy.gexf')
     graph = nx.read_gexf(graph_file)
 
@@ -10,6 +22,8 @@ if __name__ == '__main__':
     min_freq = 50
 
     lowfreq_labels = [n for n in graph if graph.nodes()[n]['weight'] < 50 and graph.nodes()[n]['real_label']]
+
+    sg = create_subgraph(graph, lowfreq_labels[0])
 
     breakpoint()
 
