@@ -1,8 +1,33 @@
 import json
 import networkx as nx
-from typing import List
+from typing import List, Set
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+
+
+def labels2graph(y):
+    g = nx.DiGraph()
+    label_counts = Counter({l for labels in y for l in labels})
+    nlp = spacy.load("en_core_web_sm")
+    for label, cnt in label_counts.items():
+        parse = nlp(label)
+        if len(parse) > 1:
+            print(label)
+            # just serialize and iteratively add each token as parent node; resulting in an path to the head noun?
+            for token in parse:
+                print(token.text, token.lemma_, token.dep_, token.pos_)
+                """
+                for nchunk in parse.noun_chunks:
+                    print(nchunk, nchunk.root.text)
+                    for token in nchunk:
+                        print(token, token.dep_)
+                """
+            breakpoint()
+        else:
+            g.add_node(label, weight=label_counts[label])
 
 
 def get_ngrams(words):
@@ -13,79 +38,67 @@ def get_ngrams(words):
                 yield tuple(ngram)
 
 
-def label_hierarchy_graph(y) -> nx.DiGraph:
-
-    label_list = list(set([l for labels in y for l in labels]))
-    token_set = set([l for label in label_list for l in label.split(' ')])
-    label_counts = Counter([l for labels in y for l in labels])
-
-    # Determine singular forms
-    print('Getting token baseforms')
+def get_base_forms(label_set: Set[str]):
+    """Determine singular forms"""
+    token_set = set([l for label in label_set for l in label.split(' ')])
     base_forms = dict()
     for token in token_set:
         if token.endswith('s') and token[:-1] in token_set:
             base_forms[token] = token[:-1]
         elif token.endswith('ies') and token[:-3] + 'y' in token_set:
             base_forms[token] = token[:-3] + 'y'
+    return base_forms
 
-    print('Lemmatizing')
-    label_words_list = []
-    tuple2label = dict()
+
+def label_hierarchy_graph(y) -> nx.DiGraph:
+
+    print('Getting token baseforms')
+    label_list = list(set([l for labels in y for l in labels]))
+    base_forms = get_base_forms(set(label_list))
+
+    print('Lemmatizing labels and counting ngrams')
+    ngram_counts = Counter()
+    label_set_lemmas = set()
     stop_words = set(stopwords.words('english'))
     for label in label_list:
-        # Represent label words as sorted bag-of-words tuples for itemset mining
-        lemmas = [base_forms.get(w, w) for w in label.split(' ')]
-        lemmas = tuple(sorted([w for w in lemmas if w not in stop_words]))
-        label_words_list.append(lemmas)
-        tuple2label[lemmas] = label
-
-    print('Itemset mining')
-    ngram_counts = Counter()
-    for words in label_words_list:
-        for ngram in get_ngrams(words):
-            ngram_counts[ngram] += 1
-    print(len(ngram_counts), 'found')
+        lemmas = tuple([base_forms.get(w, w) for w in label.split(' ')])
+        label_set_lemmas.add(lemmas)
+        for ngram in get_ngrams(lemmas):
+            if ngram == label:
+                ngram_counts[ngram] += 1
+            else:
+                # Filter ngrams that consist of stopwords only, or those that have stop words at borders
+                filtered = [l for l in ngram if l not in stop_words]
+                if filtered:
+                    if not ngram[-1] in stop_words and not ngram[0] in stop_words:
+                        ngram_counts[ngram] += 1
+    print('Found', len(ngram_counts), 'ngrams')
 
     print('Populating graph')
+    g = nx.DiGraph()
     ngrams = sorted(ngram_counts.keys(), key=len, reverse=True)
     ngrams_by_lengths = defaultdict(list)
     for ngram in ngrams:  # Bucket ngrams by lengths for faster comparison
         ngrams_by_lengths[len(ngram)].append(ngram)
-    sorted_lengths = sorted(ngrams_by_lengths.keys(), reverse=True)
+    sorted_lengths_ngrams = sorted(ngrams_by_lengths.keys(), reverse=True)
 
-    g = nx.DiGraph()
     proc_cnt = 0
-    for i, length in enumerate(sorted_lengths):
+    for i, length in enumerate(sorted_lengths_ngrams):
         for ngram in ngrams_by_lengths[length]:
-            ngram_set = set(ngram)
             proc_cnt += 1
             print(str(proc_cnt) + '\r', end='', flush=True)
-            for length2 in sorted_lengths[i+1:]:
+            len_ngram = len(ngram)
+            for length2 in sorted_lengths_ngrams[i+1:]:
                 for ngram2 in ngrams_by_lengths[length2]:
-                    if set(ngram2).issubset(ngram_set):  # Child contains all words of parent
-                        g.add_edge(tuple2label.get(ngram, ngram), tuple2label.get(ngram2, ngram2))
+                    len_ngram2 = len(ngram2)
+                    for j in range(0, len_ngram + 1 - len_ngram2):
+                        if ngram[j:j+len_ngram2] == ngram2:
+                            g.add_edge(ngram, ngram2)
 
-    """
-    for i, ngram in enumerate(ngrams):   # Start with long ngrams, find parent
-        print(str(i) + '\r', end='', flush=True)
-        ngram_set = set(ngram)
-        for ngram2 in ngrams[i+1:]:
-            if len(ngram2) < len(ngram):  # Parent can't have longer name than child
-                if set(ngram2).issubset(ngram_set):  # Child contains all words of parent
-                    g.add_edge(tuple2label.get(ngram, ngram), tuple2label.get(ngram2, ngram2))
-    """
-
-    print('Adding node attributes')
-    # Tag nodes wrt to source, either observed or synthetic labels
-    real_labels = dict()
-    label2tuple = Counter({l: t for t, l in tuple2label.items()})
-    for node in g.nodes():
-        real_labels[node] = True if node in label2tuple else False
+    real_labels = {l: True if l in label_set_lemmas else False for l in ngram_counts.keys()}
     nx.set_node_attributes(g, real_labels, 'real_label')
-    # Add frequency of (synthetic) labels as weights
-    nx.set_node_attributes(g, ngram_counts, 'weight')  # synthetic
-    nx.set_node_attributes(g, label_counts, 'weight')  # real
-
+    # TODO add label counts instead of ngram counts!
+    nx.set_node_attributes(g, ngram_counts, 'weight')
     return g
 
 
@@ -116,6 +129,7 @@ def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
                 for parent in parents:
                     g.add_edge(child, parent)
             g.remove_node(node)
+
         if len(g.edges()) == old_edge_count and len(g.nodes()) == old_node_count:
             break
     return g
@@ -140,8 +154,8 @@ def create_subgraph(graph: nx.DiGraph):
 
 if __name__ == '__main__':
 
+    # corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
-    # corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
     print('Loading data from', corpus_file)
 
     x: List[str] = []
@@ -154,8 +168,9 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
-    print('Creating graph')
     graph = label_hierarchy_graph(y)
-    print('Pruning graph')
-    graph = prune_graph(graph)
+    graph_pruned = prune_graph(graph)
     nx.write_gexf(graph, corpus_file.replace('.jsonl', '_label_hierarchy.gexf'))
+    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
+    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+    breakpoint()
