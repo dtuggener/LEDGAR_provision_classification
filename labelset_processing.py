@@ -25,6 +25,21 @@ def find_lowfreq_hubs(g):
     breakpoint()
 
 
+def map_lowfreq_labels(g: nx.DiGraph, min_freq: int = 50):
+    label_merges = {}
+    for node in g.nodes():
+        if g.nodes()[node]['real_label'] and g.nodes()[node].get('weight', 0) < min_freq:
+            # TODO find descending neighbor with either most support or most ancestor support
+            scored_neighbors = []
+            for neighbor in nx.neighbors(g, node):
+                neighbor_weight = g.nodes()[neighbor].get('weight', 0)
+                scored_neighbors.append((neighbor_weight, neighbor))
+            scored_neighbors.sort(reverse=True)
+            print(node)
+            print(scored_neighbors)
+            breakpoint()
+
+
 if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_label_hierarchy.gexf')
@@ -32,6 +47,8 @@ if __name__ == '__main__':
 
     roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
     real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+
+    map_lowfreq_labels(graph)
 
     # find nodes where the average weight of the ancestors is low
     find_lowfreq_hubs(graph)
@@ -42,7 +59,22 @@ if __name__ == '__main__':
 
     sg = create_subgraph(graph, lowfreq_labels[0])
 
-    breakpoint()
+    # TODO
+    """
+    interesting:
+('termination', 'by', 'tyson', 'without', 'cause', 'or', 'by', 'you', 'for', 'good', 'reason')
+[(122, "('good', 'reason')"), (9, "('termination', 'by', 'tyson', 'without', 'cause')")]
+print(list(g.successors("('termination', 'by', 'tyson', 'without', 'cause')")))
+["('termination',)", "('without', 'cause')"]
+-> 'by tyson' gets croped out, exactly as we want!
+-> interesting: we have a node ('termination', 'without', 'cause');
+i.e. we could check if a target has a common ancestors/if the concatenation of the labels is a (true) label! if yes, take that as the merge target!
+     """
 
+    breakpoint()
+    # TODO find descending neighbor with either most support, or most ancestor support
+
+    # TODO check for node labels that consist of token with strong association
+    #  (i.e. "change of control"; "governing law")
     # TODO: allow splitting of lowfreq label names (f<25 or f<50) into sufficiently frequent constituents;
     #  e.g. 'violation of environmental law' -> 'violation'; 'environmental law'

@@ -88,8 +88,9 @@ def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
         for node in g.nbunch_iter():
             neighbors = list(g.successors(node))
             for neighbor in neighbors:
-                neighbor_neighbors = list(g.successors(neighbor))
-                shared_neighbors = [n for n in neighbor_neighbors if n in neighbors]
+                # neighbor_neighbors = list(g.successors(neighbor))
+                neighbor_descendants = nx.descendants(g, neighbor)
+                shared_neighbors = [n for n in neighbor_descendants if n in neighbors]
                 if shared_neighbors:
                     # Remove edges from node to shared neighbors
                     for shared_neighbor in shared_neighbors:
