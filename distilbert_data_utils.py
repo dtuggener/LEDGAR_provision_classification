@@ -6,9 +6,14 @@ from torch.utils.data import TensorDataset
 
 from utils import split_corpus
 
+import numpy as np
 
-def normalize_label_set(lbls):
-    return '__'.join(sorted(l.lower() for l in lbls))
+
+def multihot(labels, label_map):
+    res = np.zeros(len(label_map))
+    for lbl in labels:
+        res[label_map[lbl]] = 1.0
+    return res
 
 
 class DonData(object):
@@ -16,24 +21,29 @@ class DonData(object):
     def __init__(self, path):
         self.don_data = split_corpus(path)
         self.all_lbls = list(sorted({
-            normalize_label_set(lbls)
+            label
             for lbls in itertools.chain(
                 self.don_data.y_train,
                 self.don_data.y_test,
                 self.don_data.y_dev if self.don_data.y_dev is not None else []
             )
+            for label in lbls
         }))
+        self.label_map = {
+            label: i
+            for i, label in enumerate(self.all_lbls)
+        }
 
     def train(self):
         return [{
             'txt': x,
-            'label': normalize_label_set(lbls),
+            'label': multihot(lbls, self.label_map),
         } for x, lbls in zip(self.don_data.x_train, self.don_data.y_train)]
 
     def test(self):
         return [{
             'txt': x,
-            'label': normalize_label_set(lbls),
+            'label': multihot(lbls, self.label_map),
         } for x, lbls in zip(self.don_data.x_test, self.don_data.y_test)]
 
 
@@ -56,7 +66,6 @@ class ListData(object):
 
 def convert_examples_to_features(
         examples,
-        label_list,
         max_seq_length,
         tokenizer,
         cls_token_at_end=False,
@@ -72,11 +81,6 @@ def convert_examples_to_features(
     cls_token = tokenizer.cls_token
     sep_token = tokenizer.sep_token
     pad_token = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
-
-    label_map = {
-        label: i
-        for i, label in enumerate(label_list)
-    }
 
     all_input_ids = []
     all_input_masks = []
@@ -119,17 +123,15 @@ def convert_examples_to_features(
         assert len(input_mask) == max_seq_length
         assert len(segment_ids) == max_seq_length
 
-        label_id = label_map[example['label']]
-
         all_input_ids.append(input_ids)
         all_input_masks.append(input_mask)
         all_segment_ids.append(segment_ids)
-        all_label_ids.append(label_id)
+        all_label_ids.append(example['label'])
 
     input_id_tensor = torch.tensor(all_input_ids, dtype=torch.long)
     input_mask_tensor = torch.tensor(all_input_masks, dtype=torch.long)
     segment_id_tensor = torch.tensor(all_segment_ids, dtype=torch.long)
-    label_id_tensor = torch.tensor(all_label_ids, dtype=torch.long)
+    label_id_tensor = torch.tensor(all_label_ids, dtype=torch.float)
 
     return TensorDataset(
         input_id_tensor,
