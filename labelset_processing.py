@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy
+from typing import Set, Dict
 
 
 def create_subgraph(graph: nx.DiGraph, root_node, direction='descendants'):
@@ -27,17 +28,52 @@ def find_lowfreq_hubs(g):
 
 def map_lowfreq_labels(g: nx.DiGraph, min_freq: int = 50):
     label_merges = {}
-    for node in g.nodes():
-        if g.nodes()[node]['real_label'] and g.nodes()[node].get('weight', 0) < min_freq:
-            # TODO find descending neighbor with either most support or most ancestor support
+    for node in g.nbunch_iter():
+        if g.nodes()[node]['real_label'] and \
+                g.nodes()[node].get('weight', 0) < min_freq and \
+                len(node) > 1:
             scored_neighbors = []
-            for neighbor in nx.neighbors(g, node):
+            mapped_labels = []
+            for neighbor in g.successors(node):
                 neighbor_weight = g.nodes()[neighbor].get('weight', 0)
                 scored_neighbors.append((neighbor_weight, neighbor))
             scored_neighbors.sort(reverse=True)
+            # map neighbors if they have sufficient support
+            for score, neighbor in scored_neighbors:
+                if score >= min_freq and g.nodes()[neighbor]['real_label']:
+                    mapped_labels.append(neighbor)
+                    breakpoint()
+                    # TODO remove mapped part from label, map the rest
+
+
+            # TODO check that all/most parts of the label name are mapped
             print(node)
             print(scored_neighbors)
             breakpoint()
+
+
+def decompose_to_roots(g: nx.DiGraph) -> Dict[str, Set[str]]:
+    label2roots = dict()
+    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
+             and list(graph.predecessors(n))]
+    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
+                  and list(graph.predecessors(n)) and graph.nodes()[n]['real_label']]
+    for node in g:
+        node_tuple = eval(node)
+        if len(node_tuple) > 1:
+            if g.nodes()[node]['real_label']:
+                descendants = nx.descendants(g, node)
+                if descendants:
+                    real_root_labels = {l for l in descendants if l in real_roots}
+                    root_labels = {l for l in descendants if l in roots}
+                else:
+                    root_labels, real_root_labels = {node}, {node}
+                print(node)
+                print(real_root_labels)
+                print(root_labels)
+                breakpoint()
+
+    return label2roots
 
 
 if __name__ == '__main__':
@@ -45,13 +81,26 @@ if __name__ == '__main__':
     graph_file = corpus_file.replace('.jsonl', '_label_hierarchy.gexf')
     graph = nx.read_gexf(graph_file)
 
-    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+    # Convert node names from strings back to tuples:
+    name_map = {l: eval(l) for l in graph.nodes()}
+    graph = nx.relabel_nodes(graph, name_map)
 
+    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
+             and list(graph.predecessors(n))]
+    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
+                  and list(graph.predecessors(n)) and graph.nodes()[n]['real_label']]
+
+    # Decompose into (real) roots
+    # label2roots = decompose_to_roots(graph)
+
+    # Split labels into parents with sufficient support
     map_lowfreq_labels(graph)
 
     # find nodes where the average weight of the ancestors is low
     find_lowfreq_hubs(graph)
+
+    # TODO
+    # Decompose so that labels have freq >= thresh
 
     min_freq = 50
 

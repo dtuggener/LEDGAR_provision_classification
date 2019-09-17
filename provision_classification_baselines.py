@@ -76,26 +76,32 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
 
 if __name__ == '__main__':
-    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean_proto.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
+    print(len(dataset.y_train), 'training samples')
+    print(len(dataset.y_test), 'test samples')
+    print(len(dataset.y_dev), 'dev samples')
 
     print('Predicting with label names')
-    # y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
-    # evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
+    y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
+    evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
 
     print('Vectorizing')
     tfidfizer = TfidfVectorizer(sublinear_tf=True)
     x_train_vecs = tfidfizer.fit_transform(dataset.x_train)
     x_test_vecs = tfidfizer.transform(dataset.x_test)
+    x_dev_vecs = tfidfizer.transform(dataset.x_dev)
     mlb = MultiLabelBinarizer().fit(dataset.y_train + dataset.y_test + dataset.y_dev)
     y_train_vecs = mlb.transform(dataset.y_train)
     y_test_vecs = mlb.transform(dataset.y_test)
 
     print('Training LogReg')
     classifier = train_classifiers(x_train_vecs, y_train_vecs)
-    y_preds_lr, _ = tune_clf_thresholds(x_test_vecs, dataset.y_test, classifier, mlb)
+    _, label_threshs = tune_clf_thresholds(x_dev_vecs, dataset.y_dev, classifier, mlb)
+    y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
+    y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
     with open('/tmp/' + corpus_file.replace('.json', '_clf.pkl'), 'wb') as f:
