@@ -11,7 +11,6 @@ from torch.utils.data import (
 
 from pytorch_transformers import (
     DistilBertConfig,
-    DistilBertForSequenceClassification,
     DistilBertTokenizer,
 )
 from pytorch_transformers import AdamW, WarmupLinearSchedule
@@ -26,6 +25,7 @@ from tqdm import tqdm, trange
 import numpy as np
 
 from distilbert_data_utils import DonData, convert_examples_to_features
+from utils import evaluate_multilabels
 
 
 class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
@@ -206,6 +206,21 @@ def evaluate(eval_dataset, model):
     }
 
 
+def multihot_to_label_lists(label_array, label_map):
+    label_id_to_label = {
+        v: k
+        for k, v in label_map.items()
+    }
+    res = []
+    for i in range(label_array.shape[0]):
+        lbl_set = []
+        for j in range(label_array.shape[1]):
+            if label_array[i, j] > 0:
+                lbl_set.append(label_id_to_label[j])
+        res.append(lbl_set)
+    return res
+
+
 def main():
     max_seq_length = 128
 
@@ -242,21 +257,11 @@ def main():
     print('predict test set')
     prediction_data = evaluate(eval_dataset=eval_data, model=model)
 
-    print(
-        'macro f1: ',
-        f1_score(
-            y_true=prediction_data['true_ids'],
-            y_pred=prediction_data['pred_ids'],
-            average='macro'
-        )
+    evaluate_multilabels(
+        y=multihot_to_label_lists(prediction_data['true_ids'], don_data.label_map),
+        y_preds=multihot_to_label_lists(prediction_data['pred_ids'], don_data.label_map),
+        do_print=True,
     )
-
-    # print(classification_report(
-    #     y_true=prediction_data['true_ids'],
-    #     y_pred=prediction_data['pred_ids'],
-    #     labels=list(range(len(don_data.all_lbls))),
-    #     target_names=don_data.all_lbls,
-    # ))
 
 
 if __name__ == '__main__':
