@@ -2,27 +2,77 @@
 import random
 
 import torch
+import torch.nn as nn
 from torch.utils.data import (
     DataLoader,
     RandomSampler,
     SequentialSampler,
-    TensorDataset,
 )
 
 from pytorch_transformers import (
-    WEIGHTS_NAME,
     DistilBertConfig,
-    DistilBertForSequenceClassification,
     DistilBertTokenizer,
 )
 from pytorch_transformers import AdamW, WarmupLinearSchedule
+from pytorch_transformers.modeling_distilbert import (
+    DistilBertPreTrainedModel,
+    DistilBertModel,
+)
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score, classification_report
 
 from tqdm import tqdm, trange
 import numpy as np
 
 from distilbert_data_utils import DonData, convert_examples_to_features
+from utils import evaluate_multilabels
+
+
+class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
+
+    def __init__(self, config):
+        super(DistilBertForMultilabelSequenceClassification, self).__init__(config)
+        self.num_labels = config.num_labels
+
+        self.distilbert = DistilBertModel(config)
+        self.pre_classifier = nn.Linear(config.dim, config.dim)
+        self.classifier = nn.Linear(config.dim, config.num_labels)
+        self.dropout = nn.Dropout(config.seq_classif_dropout)
+
+        self.init_weights()
+
+    def forward(
+            self,
+            input_ids,
+            attention_mask=None,
+            head_mask=None,
+            labels=None,
+    ):
+        distilbert_output = self.distilbert(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+        )
+        hidden_state = distilbert_output[0]
+        pooled_output = hidden_state[:, 0]
+        pooled_output = self.pre_classifier(pooled_output)
+        pooled_output = nn.ReLU()(pooled_output)
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        outputs = (logits,) + distilbert_output[1:]
+        if labels is not None:
+            if self.num_labels == 1:
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.BCEWithLogitsLoss(
+                    reduction='mean',
+                )
+                loss = loss_fct(logits, labels)
+            outputs = (loss,) + outputs
+
+        return outputs
 
 
 def set_seed(seed):
@@ -148,12 +198,27 @@ def evaluate(eval_dataset, model):
                     axis=0,
                 )
 
-    preds = np.argmax(preds, axis=1)
+    preds = preds > 0.0  # logit > 0.0 iff sigmoid(logit) > 0.5
 
     return {
         'pred_ids': preds,
         'true_ids': out_label_ids,
     }
+
+
+def multihot_to_label_lists(label_array, label_map):
+    label_id_to_label = {
+        v: k
+        for k, v in label_map.items()
+    }
+    res = []
+    for i in range(label_array.shape[0]):
+        lbl_set = []
+        for j in range(label_array.shape[1]):
+            if label_array[i, j] > 0:
+                lbl_set.append(label_id_to_label[j])
+        res.append(lbl_set)
+    return res
 
 
 def main():
@@ -166,7 +231,7 @@ def main():
 
     config = DistilBertConfig.from_pretrained(model_name, num_labels=len(don_data.all_lbls))
     tokenizer = DistilBertTokenizer.from_pretrained(model_name, do_lower_case=True)
-    model = DistilBertForSequenceClassification.from_pretrained(
+    model = DistilBertForMultilabelSequenceClassification.from_pretrained(
         model_name,
         config=config,
     )
@@ -176,7 +241,6 @@ def main():
     print('construct training data tensor')
     train_data = convert_examples_to_features(
         examples=don_data.train(),
-        label_list=don_data.all_lbls,
         max_seq_length=max_seq_length,
         tokenizer=tokenizer,
     )
@@ -187,19 +251,17 @@ def main():
     print('construct test data tensor')
     eval_data = convert_examples_to_features(
         examples=don_data.test(),
-        label_list=don_data.all_lbls,
         max_seq_length=max_seq_length,
         tokenizer=tokenizer,
     )
     print('predict test set')
     prediction_data = evaluate(eval_dataset=eval_data, model=model)
 
-    print(classification_report(
-        y_true=prediction_data['true_ids'],
-        y_pred=prediction_data['pred_ids'],
-        labels=list(range(len(don_data.all_lbls))),
-        target_names=don_data.all_lbls,
-    ))
+    evaluate_multilabels(
+        y=multihot_to_label_lists(prediction_data['true_ids'], don_data.label_map),
+        y_preds=multihot_to_label_lists(prediction_data['pred_ids'], don_data.label_map),
+        do_print=True,
+    )
 
 
 if __name__ == '__main__':
