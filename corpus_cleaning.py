@@ -134,6 +134,7 @@ def identify_lowfreq_labels(x, y, doc_ids, min_freq: int = None, min_doc_freq: i
     else:
         lowfreq_labels = set()
 
+    print(len(lowfreq_labels), 'labels found')
     return lowfreq_labels
 
 

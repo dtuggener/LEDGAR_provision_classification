@@ -30,8 +30,13 @@ def process_label(label: str, lowercase: bool = True, stop_words: Set[str] = Non
 
         if label:
 
-            if stop_words and label.lower() in stop_words:
-                continue
+            if stop_words:
+                if label.lower() in stop_words:
+                    continue
+                label_words = label.split(' ')
+                if len(label_words) > 1 and len(label_words[-1]) > 1 \
+                        and label_words[-1] in stop_words:
+                    continue
 
             label = label.lower() if lowercase else label
             filtered_labels.add(label)

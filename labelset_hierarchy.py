@@ -44,13 +44,13 @@ def real_label_hierarchy_graph(y) -> nx.DiGraph:
     y_lemmas = []
     stop_words = set(stopwords.words('english'))
     for labels in y:
-        lemmas
+        labels_lemmas = []
         for label in labels:
             label_words = label.split(' ')
             filtered = [l for l in label_words if l not in stop_words]
-            breakpoint()
             if filtered:
-                y_lemmas.append([label2lemma[l] for l in label_words])
+                labels_lemmas.append(label2lemma[label])
+        y_lemmas.append(set(labels_lemmas))
 
     label_counts = Counter([l for labels in y_lemmas for l in labels])
     print('Populating graph based on {} labels'.format(len(label_counts)))
@@ -227,4 +227,4 @@ if __name__ == '__main__':
     graph = add_ancestor_support(graph)
 
     nx.write_gexf(graph, corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf'))
-    breakpoint()
+

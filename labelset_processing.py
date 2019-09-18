@@ -144,9 +144,10 @@ def calc_token_association(graph):
 
 def find_strong_token_coocurrence(g: nx.DiGraph):
     for node in g.nodes():
-        for predecessor in g.predecessors(node):
-            if g.nodes()[predecessor].get('weight', 0) > g.nodes()[node]['weight']:
-                print(node, predecessor)
+        neighbors = list(g.successors(node))
+        for node2 in neighbors:
+            if g.nodes()[node2].get('weight', 0) < g.nodes()[node]['weight']:
+                print(node, node2)
                 breakpoint()
 
 
@@ -168,7 +169,7 @@ if __name__ == '__main__':
 
     graph = prune_sparse_roots(graph)
 
-    # find_strong_token_coocurrence(graph)
+    find_strong_token_coocurrence(graph)
 
     # Decompose into (real) roots
     label2roots = decompose_real_labels_to_roots(graph)
