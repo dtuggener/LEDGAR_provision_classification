@@ -3,6 +3,7 @@ import networkx as nx
 from typing import List, Set
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
+from utils import tuple_contains
 
 
 def get_ngrams(words):
@@ -23,6 +24,55 @@ def get_base_forms(label_set: Set[str]):
         elif token.endswith('ies') and token[:-3] + 'y' in token_set:
             base_forms[token] = token[:-3] + 'y'
     return base_forms
+
+
+def real_label_hierarchy_graph(y) -> nx.DiGraph:
+
+    print('Getting token baseforms')
+    label_list = list(set([l for labels in y for l in labels]))
+    base_forms = get_base_forms(set(label_list))
+
+    print('Lemmatizing labels')
+    label_set_lemmas = set()
+    label2lemma = dict()
+
+    for label in label_list:
+        lemmas = tuple([base_forms.get(w, w) for w in label.split(' ')])
+        label2lemma[label] = lemmas
+        label_set_lemmas.add(lemmas)
+
+    y_lemmas = []
+    stop_words = set(stopwords.words('english'))
+    for labels in y:
+        lemmas
+        for label in labels:
+            label_words = label.split(' ')
+            filtered = [l for l in label_words if l not in stop_words]
+            breakpoint()
+            if filtered:
+                y_lemmas.append([label2lemma[l] for l in label_words])
+
+    label_counts = Counter([l for labels in y_lemmas for l in labels])
+    print('Populating graph based on {} labels'.format(len(label_counts)))
+    g = nx.DiGraph()
+    label_lemmas = sorted(label_counts.keys(), key=len, reverse=True)
+    label_lemmas_by_lengths = defaultdict(list)
+    for label in label_lemmas:  # Bucket ngrams by lengths for faster comparison
+        label_lemmas_by_lengths[len(label)].append(label)
+    sorted_lengths = sorted(label_lemmas_by_lengths.keys(), reverse=True)
+
+    proc_cnt = 0
+    for i, length in enumerate(sorted_lengths):
+        for label in label_lemmas_by_lengths[length]:
+            proc_cnt += 1
+            print(str(proc_cnt) + '\r', end='', flush=True)
+            for length2 in sorted_lengths[i+1:]:
+                for label2 in label_lemmas_by_lengths[length2]:
+                    if tuple_contains(label, label2)[0]:
+                            g.add_edge(label, label2)
+
+    nx.set_node_attributes(g, label_counts, 'weight')
+    return g
 
 
 def label_hierarchy_graph(y) -> nx.DiGraph:
@@ -64,19 +114,38 @@ def label_hierarchy_graph(y) -> nx.DiGraph:
         for ngram in ngrams_by_lengths[length]:
             proc_cnt += 1
             print(str(proc_cnt) + '\r', end='', flush=True)
-            len_ngram = len(ngram)
             for length2 in sorted_lengths_ngrams[i+1:]:
                 for ngram2 in ngrams_by_lengths[length2]:
-                    len_ngram2 = len(ngram2)
-                    for j in range(0, len_ngram + 1 - len_ngram2):
-                        if ngram[j:j+len_ngram2] == ngram2:
+                    if tuple_contains(ngram, ngram2)[0]:
                             g.add_edge(ngram, ngram2)
+                            break
 
     real_labels = {l: True if l in label_set_lemmas else False for l in ngram_counts.keys()}
     nx.set_node_attributes(g, real_labels, 'real_label')
     label_counts = Counter(l for labels in y for l in labels)
     label_counts_lemmas = {label2lemma[l]: c for l, c in label_counts.items()}
     nx.set_node_attributes(g, label_counts_lemmas, 'weight')
+    return g
+
+
+def prune_real_graph(g: nx.DiGraph) -> nx.DiGraph:
+    while True:
+        old_edge_count, old_node_count = len(g.edges()), len(g.nodes())
+        # Remove edges to grandparents
+        del_edges = []
+        for node in g.nbunch_iter():
+            neighbors = list(g.successors(node))
+            for neighbor in neighbors:
+                # neighbor_neighbors = list(g.successors(neighbor))
+                neighbor_descendants = nx.descendants(g, neighbor)
+                shared_neighbors = [n for n in neighbor_descendants if n in neighbors]
+                if shared_neighbors:
+                    # Remove edges from node to shared neighbors
+                    for shared_neighbor in shared_neighbors:
+                        del_edges.append((node, shared_neighbor))
+        g.remove_edges_from(del_edges)
+        if len(g.edges()) == old_edge_count and len(g.nodes()) == old_node_count:
+            break
     return g
 
 
@@ -150,12 +219,12 @@ if __name__ == '__main__':
         labeled_provision = json.loads(line)
         y.append(labeled_provision['label'])
 
-    graph = label_hierarchy_graph(y)
-    graph_pruned = prune_graph(graph)
+    # graph = label_hierarchy_graph(y)
+    # graph = prune_graph(graph)
+    graph = real_label_hierarchy_graph(y)
+    graph = prune_real_graph(graph)
+
     graph = add_ancestor_support(graph)
 
-    nx.write_gexf(graph, corpus_file.replace('.jsonl', '_label_hierarchy.gexf'))
-
-    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))]
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and graph.nodes()[n]['real_label']]
+    nx.write_gexf(graph, corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf'))
     breakpoint()

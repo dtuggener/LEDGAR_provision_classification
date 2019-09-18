@@ -102,6 +102,10 @@ if __name__ == '__main__':
     _, label_threshs = tune_clf_thresholds(x_dev_vecs, dataset.y_dev, classifier, mlb)
     y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
     y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
+    y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
+    print('LogReg results without classifier threshold tuning')
+    evaluate_multilabels(dataset.y_test, y_preds_lr_no_tresh, do_print=True)
+    print('LogReg results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
     with open('/tmp/' + corpus_file.replace('.json', '_clf.pkl'), 'wb') as f:

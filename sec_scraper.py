@@ -8,7 +8,8 @@ import glob
 import json
 import random; random.seed(42)
 from html import unescape
-from typing import List, Tuple
+from typing import List, Tuple, Set
+from nltk.corpus import stopwords
 
 from heuristic_filtering import process_text, process_label
 
@@ -83,7 +84,7 @@ def scrape_font_tag(p: str) -> Tuple[str, str]:
     return label, text
 
 
-def scrape_exhibit_10(html_file: str, filtering: bool = True) -> List[LabeledProvision]:
+def scrape_exhibit_10(html_file: str, filtering: bool = True, stop_words: Set[str] = None) -> List[LabeledProvision]:
     """Parse exhibit 10 htm files"""
 
     html = open(html_file).read()
@@ -116,7 +117,7 @@ def scrape_exhibit_10(html_file: str, filtering: bool = True) -> List[LabeledPro
         if label and text:
 
             if filtering:
-                labels = process_label(label)
+                labels = process_label(label, stop_words=stop_words)
                 text = process_text(text)
             else:
                 labels = [label]
@@ -131,7 +132,7 @@ def scrape_exhibit_10(html_file: str, filtering: bool = True) -> List[LabeledPro
 
 def scrape_by_year(data_dir: str, years: range = range(2019, 1992, -1),
                    qs=None, max_contracts=-1, verbose: bool = True,
-                   filtering: bool = True) -> List[LabeledProvision]:
+                   filtering: bool = True, stop_words: Set[str] = None) -> List[LabeledProvision]:
 
     if qs is None:
         qs = ['QTR1', 'QTR2', 'QTR3', 'QTR4']
@@ -160,7 +161,7 @@ def scrape_by_year(data_dir: str, years: range = range(2019, 1992, -1),
                         html_file = os.path.join(year_q_dir, folder, fname)
                         if verbose:
                             print('Scraping', contracts_scraped, html_file)
-                        provisions_doc = scrape_exhibit_10(html_file, filtering=filtering)
+                        provisions_doc = scrape_exhibit_10(html_file, filtering=filtering, stop_words=stop_words)
 
                         if provisions_doc:
                             provisions.extend(provisions_doc)
@@ -173,7 +174,7 @@ def scrape_by_year(data_dir: str, years: range = range(2019, 1992, -1),
 
 
 def scrape_random_contracts(data_dir: str, max_contracts=10000,
-                            verbose: bool = True, filtering: bool = True) -> List[LabeledProvision]:
+                            verbose: bool = True, filtering: bool = True, stop_words: Set[str] = None) -> List[LabeledProvision]:
     """Randomly sample contracts to extract labeled provisions from"""
     if verbose:
         print('Fetching contracts from', data_dir)
@@ -189,7 +190,7 @@ def scrape_random_contracts(data_dir: str, max_contracts=10000,
     for contract in contracts:
         if verbose:
             print('Scraping', contracts_scraped, contract)
-        provisions_doc = scrape_exhibit_10(contract, filtering=filtering)
+        provisions_doc = scrape_exhibit_10(contract, filtering=filtering, stop_words=stop_words)
         if provisions_doc:
             provisions.extend(provisions_doc)
             contracts_scraped += 1
@@ -204,8 +205,10 @@ if __name__ == '__main__':
     data_dir = '/home/don/resources/sec_crawler/data/'
     out_dir = './'
 
-    # provisions = scrape_random_contracts(data_dir, max_contracts=max_contracts)
-    provisions = scrape_by_year(data_dir, years=range(2019, 2015, -1))
+    stop_words = set(stopwords.words('english'))
+
+    # provisions = scrape_random_contracts(data_dir, max_contracts=max_contracts, stop_words=stop_words)
+    provisions = scrape_by_year(data_dir, years=range(2019, 2015, -1), stop_words=stop_words)
 
     outfile = os.path.join(out_dir, 'sec_corpus_2016-2019.jsonl')
     with open(outfile, 'w', encoding='utf8') as f:

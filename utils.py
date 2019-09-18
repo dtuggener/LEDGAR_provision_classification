@@ -1,5 +1,5 @@
 import json
-from typing import List, Union, Dict, DefaultDict
+from typing import List, Union, Dict, DefaultDict, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
 from sklearn.model_selection import train_test_split
@@ -119,6 +119,15 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
         print('Micro F1:', round(eval_results['Micro']['f1'], 2))
 
     return eval_results
+
+
+def tuple_contains(tup1: Tuple, tup2: Tuple) -> Tuple[bool, int]:
+    """Check whether tuple 1 contains tuple 2"""
+    len_tup1, len_tup2 = len(tup1), len(tup2)
+    for i in range(0, len_tup1 + 1 - len_tup2):
+        if tup1[i:i + len_tup2] == tup2:
+            return True, i
+    return False, -1
 
 
 if __name__ == '__main__':

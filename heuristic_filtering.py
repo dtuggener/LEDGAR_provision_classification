@@ -1,8 +1,8 @@
 import re
-from typing import List, Union
+from typing import List, Union, Set
 
 
-def process_label(label: str, lowercase: bool = True) -> Union[List[str], None]:
+def process_label(label: str, lowercase: bool = True, stop_words: Set[str] = None) -> Union[List[str], None]:
     """Heuristically filter and process label(s)"""
 
     if not label:
@@ -27,7 +27,12 @@ def process_label(label: str, lowercase: bool = True) -> Union[List[str], None]:
             label = label[:-1]
 
         label = re.sub('[ \t]+', ' ', label.replace('\n', ' ').strip())
+
         if label:
+
+            if stop_words and label.lower() in stop_words:
+                continue
+
             label = label.lower() if lowercase else label
             filtered_labels.add(label)
 
