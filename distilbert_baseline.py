@@ -198,12 +198,34 @@ def evaluate(eval_dataset, model):
                     axis=0,
                 )
 
-    preds = preds > 0.0  # logit > 0.0 iff sigmoid(logit) > 0.5
+    preds = np.tanh(preds)
 
     return {
-        'pred_ids': preds,
-        'true_ids': out_label_ids,
+        'pred': preds,
+        'truth': out_label_ids,
     }
+
+
+def tune_threshs(probas, truth):
+    res = np.zeros(probas.shape[1])
+
+    for i in range(probas.shape[1]):
+        thresh = max(
+            np.linspace(-1.0, 1.0, num=100),  # we use tanh instead of sigmoid so it's not technicallly probas
+            key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t))
+        )
+        res[i] = thresh
+
+    return res
+
+
+def apply_threshs(probas, threshs):
+    res = np.zeros(probas.shape)
+
+    for i in range(probas.shape[1]):
+        res[:, i] = probas[:, i] > threshs[i]
+
+    return res
 
 
 def multihot_to_label_lists(label_array, label_map):
@@ -257,9 +279,21 @@ def main():
     print('predict test set')
     prediction_data = evaluate(eval_dataset=eval_data, model=model)
 
+    # tune thresholds
+    print('tuning clf thresholds')
+    threshs = tune_threshs(
+        probas=prediction_data['pred'],
+        truth=prediction_data['truth'],
+    )
+    predicted_mat = apply_threshs(
+        probas=prediction_data['pred'],
+        threshs=threshs,
+    )
+
+    print("Result:")
     evaluate_multilabels(
-        y=multihot_to_label_lists(prediction_data['true_ids'], don_data.label_map),
-        y_preds=multihot_to_label_lists(prediction_data['pred_ids'], don_data.label_map),
+        y=multihot_to_label_lists(prediction_data['truth'], don_data.label_map),
+        y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
         do_print=True,
     )
 
