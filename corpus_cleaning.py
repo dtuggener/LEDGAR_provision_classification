@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from typing import List, Set
 from collections import defaultdict, Counter
 from sklearn.linear_model import LinearRegression
+from nltk.corpus import stopwords
 
 
 def unique_data(x, y, doc_ids):
@@ -26,8 +27,11 @@ def split_conjuncted_labels(y: List[List[str]]) -> List[List[str]]:
     label_set = {l for labels in y for l in labels}
     split_regex = re.compile(' and | & |, ')
     splitable_labels = set([])
+    stop_words = set(stopwords.words('english'))
     for label in label_set:
         labels = split_regex.split(label)
+        if any(l for l in labels if len(l.split(' ')[-1]) > 1 and l.split(' ')[-1] in stop_words):
+            continue
         if len(labels) > 1 and any(l for l in labels if l in label_set):
             splitable_labels.add(label)
 
@@ -99,18 +103,21 @@ def get_outlier_labels(y, doc_ids, do_plot=False) -> Set[str]:
     for label, dc, pdc in zip(label_set, label_doc_counts_values, pred):
         dist = (pdc - dc) / (dc/max_dc)
         dists.append((dist, label))
-    dists.sort(reverse=True)
     std_dist = numpy.std([d[0] for d in dists])
-    outliers = [label for (dist, label) in dists if dist > std_dist]
+    outlier_ixs, outliers = [], []
+    for i, (dist, label) in enumerate(dists):
+        if dist > std_dist:
+            outliers.append(label)
+            outlier_ixs.append(i)
 
     if do_plot:
         plt.scatter(label_counts_values, label_doc_counts_values, marker='+')
         plt.plot(label_counts_values, pred, c='green')
         plt.xlabel('Label frequency')
         plt.ylabel('Label document frequency')
-        for label in outliers:
-            ix = label_set.index(label)
-            plt.plot(label_counts_values[ix], label_doc_counts_values[ix], c='red', marker='o', fillstyle='none')
+        outlier_counts = numpy.take(label_counts_values, outlier_ixs)
+        outlier_doc_counts = numpy.take(label_doc_counts_values, outlier_ixs)
+        plt.plot(outlier_counts, outlier_doc_counts, c='red', marker='o', fillstyle='none', linestyle='')
         plt.savefig('label_outliers.pdf')
 
     print(len(outliers), 'outliers found')
@@ -176,6 +183,7 @@ if __name__ == '__main__':
     x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=lowfreq_labels)
 
     outlier_labels = get_outlier_labels(y, doc_ids, do_plot=True)
+    breakpoint()
     x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=outlier_labels)
 
     print('Writing output')

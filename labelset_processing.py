@@ -158,6 +158,8 @@ def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> nx.DiGraph:
 
 
 if __name__ == '__main__':
+    # TODO
+    # check why ('without', 'good', 'reason') and ('issuance', 'of') and ('maintenance', 'of')  are still in the labels
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf')
     print('Reading graph from', graph_file)

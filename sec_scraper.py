@@ -9,17 +9,17 @@ import json
 import random; random.seed(42)
 from html import unescape
 from typing import List, Tuple, Set
+from dataclasses import dataclass
 from nltk.corpus import stopwords
 
 from heuristic_filtering import process_text, process_label
 
 
+@dataclass
 class LabeledProvision:
-    """Class for storing labeled provisions''"""
-    def __init__(self, provision: str, label: List[str], source: str):
-        self.provision = provision
-        self.label = label
-        self.source = source
+    provision: str
+    label: List[str]
+    source: str
 
 
 def scrape_u_tag(p: str) -> Tuple[str, str]:

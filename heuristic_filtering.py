@@ -12,7 +12,7 @@ def process_label(label: str, lowercase: bool = True, stop_words: Set[str] = Non
     label_delimiters_regex = re.compile('|'.join([';', '/']))
     labels = set(l.strip() for l in re.split(label_delimiters_regex, label))
 
-    blacklist = ['section', 'etc', 'now', 'whereas', 'exhibit ',
+    filter_strings = ['section', 'etc', 'now', 'whereas', 'exhibit ',
                  'therefore', 'article', 'in witness whereof', 'schedule', 'article']
     filtered_labels = set([])
 
@@ -20,7 +20,7 @@ def process_label(label: str, lowercase: bool = True, stop_words: Set[str] = Non
 
         if len(label) < 3 or len(label) > 75 or  \
                  not label[0].isupper() or  \
-                any(bw for bw in blacklist if label.lower().startswith(bw)):
+                any(bw for bw in filter_strings if label.lower().startswith(bw)):
             continue
 
         if label[-1] in ['.', ':']:  # remove scraping artifacts
@@ -34,9 +34,12 @@ def process_label(label: str, lowercase: bool = True, stop_words: Set[str] = Non
                 if label.lower() in stop_words:
                     continue
                 label_words = label.split(' ')
-                if len(label_words) > 1 and len(label_words[-1]) > 1 \
-                        and label_words[-1] in stop_words:
-                    continue
+                if len(label_words) > 1:
+                    if len(label_words[-1]) > 1 and label_words[-1].lower() in stop_words:
+                        continue
+                    if (label_words[0].lower() in stop_words or label_words[0].lower() in {'without', 'due'}) and \
+                            label_words[0].lower() not in {'other', 'further', 'no', 'not', 'own', 'off'}:
+                        continue
 
             label = label.lower() if lowercase else label
             filtered_labels.add(label)
@@ -49,13 +52,13 @@ def process_text(text: str) -> Union[str, None]:
 
     text = text.strip()
 
-    blacklist = ["” means", '" means', 'shall mean', "' means", '’ means'
+    filter_strings = ["” means", '" means', 'shall mean', "' means", '’ means'
                  'shall have the meaning', 'has the meaning', 'have meaning']
 
     if len(text) < 25 or \
             text[0].islower() or \
             text[0] in ['"', '”'] or \
-            any(bw for bw in blacklist if bw in text):
+            any(bw for bw in filter_strings if bw in text):
         return None
 
     text = text.strip()
