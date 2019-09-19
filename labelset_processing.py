@@ -1,6 +1,7 @@
+import json
 import networkx as nx
 import numpy
-from typing import Set, Dict
+from typing import Set, Dict, List, Tuple
 from utils import tuple_contains
 
 
@@ -47,23 +48,26 @@ def map_lowfreq_labels(g: nx.DiGraph, min_freq: int = 50) -> Dict[str, Set[str]]
 
         if g.nodes()[node]['real_label'] and \
                 g.nodes()[node].get('weight', 0) < min_freq and \
+                g.nodes()[node].get('ancestor support', 0) < min_freq and \
                 len(node) > 1:
             scored_neighbors = []
             mapped_labels = set()
+
             for neighbor in g.successors(node):
                 neighbor_weight = g.nodes()[neighbor].get('weight', 0)
                 scored_neighbors.append((neighbor_weight, neighbor))
             scored_neighbors.sort(reverse=True)
 
             for score, neighbor in scored_neighbors:
-                if (score >= min_freq or g.nodes()[neighbor].get('ancestor support', 0) >= min_freq): # and g.nodes()[neighbor]['real_label']:  # Allow synthetic labels?
+                if (score >= min_freq or
+                        g.nodes()[neighbor].get('ancestor support', 0) >= min_freq):  # and g.nodes()[neighbor]['real_label']:  # Allow synthetic labels?
                     mapped_labels.add(neighbor)
                 else:
-                    # Decompose further
                     descendants = get_popular_descendants(neighbor, g)
                     mapped_labels.update(descendants)
 
             label_merges[node] = mapped_labels
+
     return label_merges
 
 
@@ -151,15 +155,15 @@ def find_strong_token_coocurrence(g: nx.DiGraph):
                 breakpoint()
 
 
-def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> nx.DiGraph:
-    spare_roots = [n for n in g.nodes() if not list(g.successors(n)) and g.nodes()[n]['weight'] < min_freq]
+def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> Tuple[nx.DiGraph, List[Tuple[str]]]:
+    spare_roots = [n for n in g.nodes() if not list(g.successors(n)) and
+                   g.nodes()[n]['weight'] < min_freq and
+                   g.nodes()[n]['ancestor support'] < min_freq]
     g.remove_nodes_from(spare_roots)
-    return g
+    return g, spare_roots
 
 
 if __name__ == '__main__':
-    # TODO
-    # check why ('without', 'good', 'reason') and ('issuance', 'of') and ('maintenance', 'of')  are still in the labels
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf')
     print('Reading graph from', graph_file)
@@ -169,42 +173,61 @@ if __name__ == '__main__':
     name_map = {l: eval(l) for l in graph.nodes()}
     graph = nx.relabel_nodes(graph, name_map)
 
-    graph = prune_sparse_roots(graph)
+    graph, sparse_roots = prune_sparse_roots(graph)
+    sparse_roots = {' '.join(l) for l in sparse_roots}
 
-    find_strong_token_coocurrence(graph)
+    # Split labels into parents with sufficient support
+    label_merges = map_lowfreq_labels(graph, min_freq=100)
 
+    print('Loading data from', corpus_file)
+    x: List[str] = []
+    y: List[List[str]] = []
+    doc_ids: List[str] = []
+    for line in open(corpus_file):
+        labeled_provision = json.loads(line)
+        x.append(labeled_provision['provision'])
+        y.append(labeled_provision['label'])
+        doc_ids.append(labeled_provision['source'])
+
+    new_y, new_x, new_doc_ids = [], [], []
+    for x_, y_, doc_id in zip(x, y, doc_ids):
+        new_y_ = list()
+        for label in y_:
+            if label not in sparse_roots:
+                new_y_.append(label_merges.get(label, label))
+        if new_y_:
+            new_x.append(x_)
+            new_doc_ids.append(doc_id)
+            new_y.append(new_y_)
+    x, y, doc_ids = new_x, new_y, new_doc_ids
+
+    print('Writing output')
+    with open(corpus_file.replace('.jsonl', '_projected_min_freq_100.jsonl'), 'w',  encoding='utf8') as f:
+        for provision, labels, doc_id in zip(x, y, doc_ids):
+            json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
+            f.write('\n')
+
+    """
     # Decompose into (real) roots
     label2roots = decompose_real_labels_to_roots(graph)
+
+    find_strong_token_coocurrence(graph)
 
     # find association between tokens to identify non-splitable labels
     token_assoc = calc_token_association(graph)
 
-
-    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
-             and list(graph.predecessors(n))]
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
-                  and list(graph.predecessors(n)) and graph.nodes()[n]['real_label']]
-
-    jacc_ixs = calc_token_association(graph)
-
-    # Split labels into parents with sufficient support
-    label_merges = map_lowfreq_labels(graph, min_freq=100)
-    breakpoint()
-    # non_merged_labels = [n for n in graph.nbunch_iter() if n not in label_merges]
-
     # find nodes where the average weight of the ancestors is low
     find_lowfreq_hubs(graph)
 
-    """
-    interesting:
-('termination', 'by', 'tyson', 'without', 'cause', 'or', 'by', 'you', 'for', 'good', 'reason')
-[(122, "('good', 'reason')"), (9, "('termination', 'by', 'tyson', 'without', 'cause')")]
-print(list(g.successors("('termination', 'by', 'tyson', 'without', 'cause')")))
-["('termination',)", "('without', 'cause')"]
--> 'by tyson' gets croped out, exactly as we want!
--> interesting: we have a node ('termination', 'without', 'cause');
-i.e. we could check if a target has a common ancestors/if the concatenation of the labels is a (true) label! if yes, take that as the merge target!
-     """
 
+    interesting:
+    ('termination', 'by', 'tyson', 'without', 'cause', 'or', 'by', 'you', 'for', 'good', 'reason')
+    [(122, "('good', 'reason')"), (9, "('termination', 'by', 'tyson', 'without', 'cause')")]
+    print(list(g.successors("('termination', 'by', 'tyson', 'without', 'cause')")))
+    ["('termination',)", "('without', 'cause')"]
+    -> 'by tyson' gets croped out, exactly as we want!
+    -> interesting: we have a node ('termination', 'without', 'cause');
+    i.e. we could check if a target has a common ancestors/if the concatenation of the labels is a (true) label! if yes, take that as the merge target!
     # TODO check for node labels that consist of token with strong association
     #  (i.e. "change of control"; "governing law")
+"""

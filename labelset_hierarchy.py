@@ -1,9 +1,17 @@
 import json
 import networkx as nx
-from typing import List, Set
+from typing import List, Set, Tuple
 from nltk.corpus import stopwords
 from collections import defaultdict, Counter
-from utils import tuple_contains
+
+
+def tuple_contains(tup1: Tuple, tup2: Tuple) -> Tuple[bool, int]:
+    """Check whether tuple 1 contains tuple 2"""
+    len_tup1, len_tup2 = len(tup1), len(tup2)
+    for i in range(0, len_tup1 + 1 - len_tup2):
+        if tup1[i:i + len_tup2] == tup2:
+            return True, i
+    return False, -1
 
 
 def get_ngrams(words):
@@ -72,6 +80,7 @@ def real_label_hierarchy_graph(y) -> nx.DiGraph:
                             g.add_edge(label, label2)
 
     nx.set_node_attributes(g, label_counts, 'weight')
+    nx.set_node_attributes(g, {l: True for l in label_counts}, 'real_label')
     return g
 
 
@@ -222,7 +231,7 @@ if __name__ == '__main__':
     # graph = label_hierarchy_graph(y)
     # graph = prune_graph(graph)
     graph = real_label_hierarchy_graph(y)
-    graph = prune_real_graph(graph)
+    graph = prune_graph(graph)
 
     graph = add_ancestor_support(graph)
 

@@ -191,5 +191,3 @@ if __name__ == '__main__':
         for provision, labels, doc_id in zip(x, y, doc_ids):
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')
-
-

@@ -1,8 +1,12 @@
 import json
+import numpy
+import re
 from typing import List, Union, Dict, DefaultDict, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 @dataclass
@@ -121,13 +125,87 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
     return eval_results
 
 
-def tuple_contains(tup1: Tuple, tup2: Tuple) -> Tuple[bool, int]:
-    """Check whether tuple 1 contains tuple 2"""
-    len_tup1, len_tup2 = len(tup1), len(tup2)
-    for i in range(0, len_tup1 + 1 - len_tup2):
-        if tup1[i:i + len_tup2] == tup2:
-            return True, i
-    return False, -1
+def stringify_labels(y_vecs: numpy.array, mlb: MultiLabelBinarizer,
+                     thresh: float = 0.5, label_threshs: Dict[str, float] = None) -> List[List[str]]:
+    """
+    Turn prediction probabilities into label strings
+    :param y_vecs:
+    :param mlb:
+    :param thresh:
+    :param label_threshs: Classification threshold per label
+    :return:
+    """
+    y_pred: List[List[str]] = []
+    if not label_threshs:
+        label_threshs = {l: thresh for l in mlb.classes_}
+    label_threshs = [label_threshs[l] for l in mlb.classes_]
+    for prediction in y_vecs:
+        label_indexes = numpy.where(prediction >= label_threshs)[0]
+        if label_indexes.size > 0:  # One of the classes has triggered
+            labels = set(numpy.take(mlb.classes_, label_indexes))
+        else:
+            labels = []
+        y_pred.append(labels)
+    return y_pred
+
+
+def average_embeddings(x_embedded: List[List[float]], avg_method: str, embedding_dims: int) -> numpy.array:
+    """
+    Average word embeddings in a sentence to get a sentence represenation
+    :param x_embedded: List of embeddings
+    :param avg_method: Method to average the embeddings
+    :param embedding_dims: Dimensionality of the word embeddings
+    :return: Averaged word embeddings
+    """
+    if x_embedded:
+        if avg_method == 'mean':
+            return numpy.mean(x_embedded, axis=0)
+        elif avg_method == 'sum':
+            return numpy.sum(x_embedded, axis=0)
+        elif avg_method == 'max_pool':
+            return numpy.max(x_embedded, axis=0)
+    else:
+        return numpy.zeros(embedding_dims)
+
+
+def embed(x_s: List[str], embeddings: numpy.array, vocab: Dict, tfidfizer: TfidfVectorizer = None,
+          avg_method: str = 'mean', use_tfidf: bool = True) -> numpy.array:
+    """
+    Transform texts to averaged word embeddings, weighted by TF IDF
+    :param x_s: List of texts
+    :param embeddings: Embedding matrix
+    :param vocab: Vocabulary covered by embeddings
+    :param avg_method: how to average embeddings; 'mean', 'sum', or 'max_pool'
+    :param use_tfidf: whether to weigh each embedding by it's tf idf weight
+    :return: List of averaged word embeddings
+    """
+    x_vecs = []
+    embedding_dims = embeddings.shape[1]
+    if use_tfidf:
+        if not tfidfizer:
+            tfidfizer = TfidfVectorizer(norm=None).fit(x_s)
+        ix2word = {v: k for k, v in tfidfizer.vocabulary_.items()}
+        x_tfidf = tfidfizer.transform(x_s).toarray()
+        for x in x_tfidf:
+            x_embedded = []
+            non_zeros = numpy.where(x > 0)[0]  # Find non-zero entries
+            for ix in non_zeros:
+                word = ix2word[ix]
+                if word in vocab:
+                    x_embedded.append(x[ix] * embeddings[vocab[word]])  # Multiply the embedding with the TF IDF weight
+            x_avg = average_embeddings(x_embedded, avg_method, embedding_dims)
+            x_vecs.append(x_avg)
+    else:
+        for x in x_s:
+            x_embedded = []
+            words = re.findall('\w+', x.lower())
+            for word in words:
+                if word in vocab:
+                    x_embedded.append(embeddings[vocab[word]])
+            x_avg = average_embeddings(x_embedded, avg_method, embedding_dims)
+            x_vecs.append(x_avg)
+
+    return numpy.array(x_vecs)
 
 
 if __name__ == '__main__':
