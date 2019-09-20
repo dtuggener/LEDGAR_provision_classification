@@ -93,7 +93,7 @@ if __name__ == '__main__':
     x_train_vecs = tfidfizer.fit_transform(dataset.x_train)
     x_test_vecs = tfidfizer.transform(dataset.x_test)
     x_dev_vecs = tfidfizer.transform(dataset.x_dev)
-    mlb = MultiLabelBinarizer().fit(dataset.y_train + dataset.y_test + dataset.y_dev)
+    mlb = MultiLabelBinarizer().fit(dataset.y_train)
     y_train_vecs = mlb.transform(dataset.y_train)
     y_test_vecs = mlb.transform(dataset.y_test)
 

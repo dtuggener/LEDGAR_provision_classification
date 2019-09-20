@@ -35,16 +35,15 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
 
 if __name__ == '__main__':
 
-    train_de = True
+    train_de = False
     test_de = True
-    test_en = False
 
     model_name = 'keras_MLP_avg_tfidf.h5'
 
     epochs = 50
     batch_size = 32
 
-    corpus_file = 'sec_corpus_2016-2019_clean_proto.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -57,8 +56,8 @@ if __name__ == '__main__':
     train_y = mlb.transform(dataset.y_train)
     test_y = mlb.transform(dataset.y_test)
 
-    embedding_file = 'data/small.mapped.wiki.en.vec_data.npy'
-    vocab_file = 'data/small.mapped.wiki.en.vec_vocab.json'
+    embedding_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_data.npy'
+    vocab_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_vocab.json'
     embeddings = numpy.load(embedding_file)
     vocab_de = json.load(open(vocab_file))
     print('Preprocessing')
@@ -71,12 +70,15 @@ if __name__ == '__main__':
     sum_labels_counts = sum(label_counts.values())
     class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt/sum_labels_counts) for label, cnt in label_counts.items()}
 
-    print('Training model')
-    model = train(train_x, train_y, num_classes, batch_size, epochs, class_weight=class_weight)
-    model.save('saved_models/%s' % model_name, overwrite=True)
+    if train_de:
+        print('Training model')
+        model = train(train_x, train_y, num_classes, batch_size, epochs, class_weight=class_weight)
+        model.save('saved_models/%s' % model_name, overwrite=True)
+    else:
+        print('Loading model')
+        model = keras.models.load_model('saved_models/%s' % model_name)
+
     y_pred_bin = model.predict(test_x)
     y_pred = stringify_labels(y_pred_bin, mlb)
-    evaluate_multilabels(dataset.y_test, y_pred)
+    evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
 
-    # print('Loading model')
-    # model = keras.models.load_model('saved_models/%s' % model_name)
