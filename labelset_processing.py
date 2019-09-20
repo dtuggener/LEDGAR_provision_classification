@@ -2,7 +2,7 @@ import json
 import networkx as nx
 import numpy
 from typing import Set, Dict, List, Tuple
-from utils import tuple_contains
+from labelset_hierarchy import get_base_forms
 
 
 def create_subgraph(graph: nx.DiGraph, root_node, direction='descendants'):
@@ -96,20 +96,18 @@ def decompose_to_roots(g: nx.DiGraph, min_freq: int = 50) -> Dict[str, Set[str]]
     return label2roots
 
 
-def decompose_real_labels_to_roots(g: nx.DiGraph, min_freq: int = 50) -> Dict[str, Set[str]]:
+def decompose_real_labels_to_roots(g: nx.DiGraph) -> Dict[str, List[str]]:
     label2roots = dict()
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
-                  and list(graph.predecessors(n)) and g.nodes()[n].get('weight', 0) >= min_freq]
     for node in g:
         if len(node) > 1:
             descendants = nx.descendants(g, node)
             if descendants:
-                real_root_labels = {l for l in descendants if l in real_roots}
+                real_root_labels = [' '.join(l) for l in descendants if not list(g.successors(l))]
             else:
-                real_root_labels = {node}
-            print(node)
-            print(real_root_labels)
-            breakpoint()
+                real_root_labels = [' '.join(node)]
+        else:
+            real_root_labels = [' '.join(node)]
+        label2roots[' '.join(node)] = real_root_labels
     return label2roots
 
 
@@ -177,7 +175,12 @@ if __name__ == '__main__':
     sparse_roots = {' '.join(l) for l in sparse_roots}
 
     # Split labels into parents with sufficient support
-    label_merges = map_lowfreq_labels(graph, min_freq=100)
+    #label_merges = map_lowfreq_labels(graph, min_freq=100)
+    #label_set_size = len(set([l for labels in label_merges.values() for l in labels]))
+    #breakpoint()
+
+    # Decompose into (real) roots
+    label_merges = decompose_real_labels_to_roots(graph)
 
     print('Loading data from', corpus_file)
     x: List[str] = []
@@ -189,20 +192,27 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
+    label_set = set(l for labels in y for l in labels)
+    base_forms = get_base_forms(label_set)
+
     new_y, new_x, new_doc_ids = [], [], []
-    for x_, y_, doc_id in zip(x, y, doc_ids):
-        new_y_ = list()
-        for label in y_:
-            if label not in sparse_roots:
-                new_y_.append(label_merges.get(label, label))
-        if new_y_:
-            new_x.append(x_)
-            new_doc_ids.append(doc_id)
-            new_y.append(new_y_)
+    for x_i, y_i, doc_id in zip(x, y, doc_ids):
+        new_y_i: List[str] = list()
+        for label in y_i:
+            label = ' '.join(base_forms.get(l, l) for l in label.split())
+            if label not in sparse_roots and label in label_merges:
+                new_y_i.extend(label_merges[label])
+            else:
+                new_y_i.append(label)
+        new_x.append(x_i)
+        new_doc_ids.append(doc_id)
+        new_y.append(new_y_i)
+
     x, y, doc_ids = new_x, new_y, new_doc_ids
+    label_set = set([l for labels in y for l in labels])
 
     print('Writing output')
-    with open(corpus_file.replace('.jsonl', '_projected_min_freq_100.jsonl'), 'w',  encoding='utf8') as f:
+    with open(corpus_file.replace('.jsonl', '_projected_roots.jsonl'), 'w',  encoding='utf8') as f:
         for provision, labels, doc_id in zip(x, y, doc_ids):
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')

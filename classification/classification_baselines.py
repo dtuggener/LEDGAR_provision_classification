@@ -42,7 +42,8 @@ def stringify_labels(y_vecs: numpy.array, mlb: MultiLabelBinarizer,
 def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[List[str]]:
     label_set = set(l for labels in y_train for l in labels)
     y_preds = []
-    for x in x_test:
+    for i, x in enumerate(x_test):
+        print(i, '\r', end='', flush=True)
         y_pred = []
         for label in label_set:
             if label in x.lower() or (label.endswith('s') and label[:-1] in x.lower()):
@@ -76,9 +77,9 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
 
 if __name__ == '__main__':
-    corpus_file = 'sec_corpus_2016-2019_clean_proto.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_projected_roots.jsonl'
 
-    print('Loading corpus', corpus_file)
+    print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
     print(len(dataset.y_train), 'training samples')
     print(len(dataset.y_test), 'test samples')
