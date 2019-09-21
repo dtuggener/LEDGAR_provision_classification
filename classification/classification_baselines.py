@@ -109,5 +109,5 @@ if __name__ == '__main__':
     print('LogReg results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
-    with open('/tmp/' + corpus_file.replace('.json', '_clf.pkl'), 'wb') as f:
+    with open('/tmp/logreg_sec_clf.pkl', 'wb') as f:
         pickle.dump(classifier, f)

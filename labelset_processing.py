@@ -196,6 +196,7 @@ if __name__ == '__main__':
     base_forms = get_base_forms(label_set)
 
     new_y, new_x, new_doc_ids = [], [], []
+    dumped_labels = set()
     for x_i, y_i, doc_id in zip(x, y, doc_ids):
         new_y_i: List[str] = list()
         for label in y_i:
@@ -203,13 +204,15 @@ if __name__ == '__main__':
             if label not in sparse_roots and label in label_merges:
                 new_y_i.extend(label_merges[label])
             else:
-                new_y_i.append(label)
-        new_x.append(x_i)
-        new_doc_ids.append(doc_id)
-        new_y.append(new_y_i)
+                dumped_labels.add(label)
+        if new_y_i:
+            new_x.append(x_i)
+            new_doc_ids.append(doc_id)
+            new_y.append(new_y_i)
 
     x, y, doc_ids = new_x, new_y, new_doc_ids
     label_set = set([l for labels in y for l in labels])
+    breakpoint()
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_projected_roots.jsonl'), 'w',  encoding='utf8') as f:
