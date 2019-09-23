@@ -71,27 +71,23 @@ def map_lowfreq_labels(g: nx.DiGraph, min_freq: int = 50) -> Dict[str, Set[str]]
     return label_merges
 
 
-def decompose_to_roots(g: nx.DiGraph, min_freq: int = 50) -> Dict[str, Set[str]]:
+def decompose_to_roots(g: nx.DiGraph) -> Dict[str, List[str]]:
     label2roots = dict()
-    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
-             and list(graph.predecessors(n))
-             and (g.nodes()[n].get('weight', 0) >= min_freq or g.nodes()[n].get('ancestor support', 0) >= min_freq)]
-    real_roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n))
-                  and list(graph.predecessors(n)) and graph.nodes()[n]['real_label']
-                  and g.nodes()[n].get('weight', 0) >= min_freq]
+    roots = [n for n in graph.nbunch_iter() if not list(graph.successors(n)) and
+             list(graph.predecessors(n))]
     for node in g:
         if len(node) > 1:
-            if g.nodes()[node]['real_label']:
-                descendants = nx.descendants(g, node)
-                if descendants:
-                    real_root_labels = {l for l in descendants if l in real_roots}
-                    root_labels = {l for l in descendants if l in roots}
-                else:
-                    root_labels, real_root_labels = {node}, {node}
-                print(node)
-                print(real_root_labels)
-                print(root_labels)
-                breakpoint()
+            descendants = nx.descendants(g, node)
+            if descendants:
+                root_labels = [' '.join(l) for l in descendants if l in roots]
+            else:
+                root_labels = [' '.join(node)]
+            print(node)
+            print(root_labels)
+            breakpoint()
+        else:
+            root_labels = [' '.join(node)]
+        label2roots[' '.join(node)] = root_labels
 
     return label2roots
 
@@ -155,8 +151,8 @@ def find_strong_token_coocurrence(g: nx.DiGraph):
 
 def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> Tuple[nx.DiGraph, List[Tuple[str]]]:
     spare_roots = [n for n in g.nodes() if not list(g.successors(n)) and
-                   g.nodes()[n]['weight'] < min_freq and
-                   g.nodes()[n]['ancestor support'] < min_freq]
+                   g.nodes()[n].get('weight', 0) < min_freq and
+                   g.nodes()[n].get('ancestor support', 0) < min_freq]
     g.remove_nodes_from(spare_roots)
     return g, spare_roots
 
@@ -164,6 +160,7 @@ def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> Tuple[nx.DiGraph, L
 if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf')
+    # graph_file = corpus_file.replace('.jsonl', '_label_hierarchy.gexf')
     print('Reading graph from', graph_file)
     graph = nx.read_gexf(graph_file)
 
@@ -181,6 +178,7 @@ if __name__ == '__main__':
 
     # Decompose into (real) roots
     label_merges = decompose_real_labels_to_roots(graph)
+    # label_merges = decompose_to_roots(graph)
 
     print('Loading data from', corpus_file)
     x: List[str] = []
@@ -193,6 +191,7 @@ if __name__ == '__main__':
         doc_ids.append(labeled_provision['source'])
 
     label_set = set(l for labels in y for l in labels)
+    breakpoint()
     base_forms = get_base_forms(label_set)
 
     new_y, new_x, new_doc_ids = [], [], []
@@ -215,7 +214,7 @@ if __name__ == '__main__':
     breakpoint()
 
     print('Writing output')
-    with open(corpus_file.replace('.jsonl', '_projected_roots.jsonl'), 'w',  encoding='utf8') as f:
+    with open(corpus_file.replace('.jsonl', '_projected_real_roots.jsonl'), 'w',  encoding='utf8') as f:
         for provision, labels, doc_id in zip(x, y, doc_ids):
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')

@@ -192,23 +192,6 @@ def prune_graph(g: nx.DiGraph) -> nx.DiGraph:
     return g
 
 
-def create_subgraph(graph: nx.DiGraph):
-    root_node = ('request',)
-    root_node2 = ('borrowing',)
-    children = nx.ancestors(graph, root_node)
-    children.add(root_node)
-    children2 = nx.ancestors(graph, root_node2)
-    children2.add(root_node2)
-    all_children = children.union(children2)
-    sg = nx.subgraph(graph, all_children)
-    nx.write_gexf(sg, 'label_hierarchy_sg.gexf')
-    """
-    import matplotlib.pyplot as plt
-    nx.draw_networkx(sg)
-    plt.show()
-    """
-
-
 def add_ancestor_support(g):
     for node in g.nodes():
         ancestor_support = sum([g.nodes()[anc].get('weight', 0) for anc in nx.ancestors(graph, node)])
@@ -228,12 +211,12 @@ if __name__ == '__main__':
         labeled_provision = json.loads(line)
         y.append(labeled_provision['label'])
 
-    # graph = label_hierarchy_graph(y)
-    # graph = prune_graph(graph)
-    graph = real_label_hierarchy_graph(y)
+    graph = label_hierarchy_graph(y)
     graph = prune_graph(graph)
+    # graph = real_label_hierarchy_graph(y)
+    # graph = prune_graph(graph)
 
     graph = add_ancestor_support(graph)
 
-    nx.write_gexf(graph, corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf'))
+    nx.write_gexf(graph, corpus_file.replace('.jsonl', '_label_hierarchy.gexf'))
 
