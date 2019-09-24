@@ -77,7 +77,7 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
 
 if __name__ == '__main__':
-    corpus_file = '../sec_corpus_2016-2019_clean_projected_roots.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -109,5 +109,5 @@ if __name__ == '__main__':
     print('LogReg results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
-    with open('/tmp/logreg_sec_clf.pkl', 'wb') as f:
+    with open('/tmp/logreg_sec_clf_NDA.pkl', 'wb') as f:
         pickle.dump(classifier, f)

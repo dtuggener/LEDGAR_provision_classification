@@ -211,7 +211,6 @@ if __name__ == '__main__':
 
     x, y, doc_ids = new_x, new_y, new_doc_ids
     label_set = set([l for labels in y for l in labels])
-    breakpoint()
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_projected_real_roots.jsonl'), 'w',  encoding='utf8') as f:
@@ -220,9 +219,6 @@ if __name__ == '__main__':
             f.write('\n')
 
     """
-    # Decompose into (real) roots
-    label2roots = decompose_real_labels_to_roots(graph)
-
     find_strong_token_coocurrence(graph)
 
     # find association between tokens to identify non-splitable labels
@@ -230,16 +226,4 @@ if __name__ == '__main__':
 
     # find nodes where the average weight of the ancestors is low
     find_lowfreq_hubs(graph)
-
-
-    interesting:
-    ('termination', 'by', 'tyson', 'without', 'cause', 'or', 'by', 'you', 'for', 'good', 'reason')
-    [(122, "('good', 'reason')"), (9, "('termination', 'by', 'tyson', 'without', 'cause')")]
-    print(list(g.successors("('termination', 'by', 'tyson', 'without', 'cause')")))
-    ["('termination',)", "('without', 'cause')"]
-    -> 'by tyson' gets croped out, exactly as we want!
-    -> interesting: we have a node ('termination', 'without', 'cause');
-    i.e. we could check if a target has a common ancestors/if the concatenation of the labels is a (true) label! if yes, take that as the merge target!
-    # TODO check for node labels that consist of token with strong association
-    #  (i.e. "change of control"; "governing law")
-"""
+    """

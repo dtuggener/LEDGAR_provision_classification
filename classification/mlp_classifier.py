@@ -35,15 +35,15 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
 
 if __name__ == '__main__':
 
-    train_de = False
+    train_de = True
     test_de = True
 
-    model_name = 'keras_MLP_avg_tfidf.h5'
+    model_name = 'MLP_avg_tfidf_roots.h5'
 
     epochs = 50
     batch_size = 32
 
-    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_projected_roots.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
