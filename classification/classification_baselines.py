@@ -52,10 +52,10 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
     return y_preds
 
 
-def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: MultiLabelBinarizer) \
-        -> Tuple[numpy.array, Dict[str, float]]:
+def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier,
+                        mlb: MultiLabelBinarizer) -> Tuple[numpy.array, Dict[str, float]]:
     y_pred_vecs = classifier.predict_proba(test_x)
-    thresh_range = [t / 10.0 for t in range(1, 10)]
+    thresh_range = [t / 100.0 for t in range(1, 100)]
     all_results = dict()
     for thresh in thresh_range:
         y_pred = stringify_labels(y_pred_vecs, mlb, thresh=thresh)
@@ -64,7 +64,7 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
     label_threshs: Dict[str, float] = dict()
     for label in mlb.classes_:
-        best_thresh, best_f1 = 0.1, 0.0
+        best_thresh, best_f1 = min(thresh_range), 0.0
         for curr_thresh in thresh_range:
             curr_f1 = all_results[curr_thresh][label]['f1']
             if curr_f1 > best_f1:
@@ -77,7 +77,12 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier, mlb: Mu
 
 
 if __name__ == '__main__':
+
+    predict_with_labelnames = False
+    do_train = False
+
     corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    classifier_file = 'saved_models/logreg_sec_clf_NDA.pkl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -85,22 +90,35 @@ if __name__ == '__main__':
     print(len(dataset.y_test), 'test samples')
     print(len(dataset.y_dev), 'dev samples')
 
-    print('Predicting with label names')
-    y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
-    evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
+    label_set = set(l for labels in dataset.y_train for l in labels)
+    print('Label set size:', len(label_set))
+
+    if predict_with_labelnames:
+        print('Predicting with label names')
+        y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
+        evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
 
     print('Vectorizing')
     tfidfizer = TfidfVectorizer(sublinear_tf=True)
     x_train_vecs = tfidfizer.fit_transform(dataset.x_train)
     x_test_vecs = tfidfizer.transform(dataset.x_test)
     x_dev_vecs = tfidfizer.transform(dataset.x_dev)
+
     mlb = MultiLabelBinarizer().fit(dataset.y_train)
     y_train_vecs = mlb.transform(dataset.y_train)
     y_test_vecs = mlb.transform(dataset.y_test)
 
-    print('Training LogReg')
-    classifier = train_classifiers(x_train_vecs, y_train_vecs)
+    if do_train:
+        print('Training LogReg')
+        classifier = train_classifiers(x_train_vecs, y_train_vecs)
+        with open(classifier_file, 'wb') as f:
+            pickle.dump(classifier, f)
+    else:
+        print('Loading classifier')
+        with open(classifier_file, 'rb') as f:
+            classifier = pickle.load(f)
     _, label_threshs = tune_clf_thresholds(x_dev_vecs, dataset.y_dev, classifier, mlb)
+    breakpoint()
     y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
     y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
     y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
@@ -109,5 +127,3 @@ if __name__ == '__main__':
     print('LogReg results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
-    with open('/tmp/logreg_sec_clf_NDA.pkl', 'wb') as f:
-        pickle.dump(classifier, f)

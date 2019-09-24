@@ -1,8 +1,0 @@
-Macro Avg. Rec: 0.83
-Macro Avg. Prec: 0.42
-Macro F1: 0.53
-
-Micro Avg. Rec: 0.86
-Micro Avg. Prec: 0.4
-Micro F1: 0.54
-

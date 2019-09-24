@@ -62,6 +62,6 @@ if __name__ == '__main__':
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_NDA_PTs.jsonl'), 'w',  encoding='utf8') as f:
-        for provision, labels, doc_id in zip(x, y, doc_ids):
+        for provision, labels, doc_id in zip(sampled_x, sampled_y, sampled_doc_ids):
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')
