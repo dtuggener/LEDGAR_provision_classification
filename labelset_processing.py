@@ -171,6 +171,8 @@ if __name__ == '__main__':
     graph, sparse_roots = prune_sparse_roots(graph)
     sparse_roots = {' '.join(l) for l in sparse_roots}
 
+    breakpoint()
+
     # Split labels into parents with sufficient support
     #label_merges = map_lowfreq_labels(graph, min_freq=100)
     #label_set_size = len(set([l for labels in label_merges.values() for l in labels]))

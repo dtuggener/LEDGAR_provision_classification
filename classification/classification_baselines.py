@@ -81,8 +81,11 @@ if __name__ == '__main__':
     predict_with_labelnames = False
     do_train = True
 
-    corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
+    #corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    #classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
+
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
