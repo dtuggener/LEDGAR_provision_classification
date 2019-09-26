@@ -155,7 +155,7 @@ def create_subcorpora(x, y, doc_ids):
 
 
 def incremental_label_stats(x, y, doc_ids):
-    for i in [0, 10, 50, 100, 500, 1000, 5000]:
+    for i in [0, 10, 50, 100, 500, 1000, 5000, 10000]:
         print(i)
         x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=i)
         label_stats(x_small, y_small, doc_ids_small, n=0)
@@ -190,13 +190,35 @@ def plot_label_name_vs_freq(y):
         name_lengths.append(label.count(' ') + 1)
     plt.scatter(label_counts, name_lengths, marker='+', c='black')
     plt.xlabel('Label frequency')
-    plt.ylabel('Label token count')
+    plt.ylabel('Label name token count')
     plt.savefig('label_name_length_vs_freq.pdf')
+
+
+def cluster_labels(y, doc_ids):
+    doc2labels = defaultdict(set)
+    labels2docs = defaultdict(set)
+    for labels, doc_id in zip(y, doc_ids):
+        doc2labels[doc_id].update(labels)
+        for label in labels:
+            labels2docs[label].add(doc_id)
+
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.cluster import KMeans
+    cv = CountVectorizer(binary=True, tokenizer=lambda x: x, preprocessor=lambda x: x)
+
+    label_vecs = cv.fit_transform(list(labels2docs.values()))
+    label_list = list(labels2docs.keys())
+    # TODO maybe softclustering is more appropriate here
+    kmeans = KMeans(n_clusters=50).fit(label_vecs)
+    clusters = defaultdict(list)
+    for i, label in enumerate(kmeans.labels_):
+        clusters[label].append(label_list[i])
+    breakpoint()
 
 
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
 
     x: List[str] = []
     y: List[List[str]] = []
@@ -209,28 +231,16 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
-    label_stats(x, y, doc_ids, n=0)
+    labels = [l for labels in y for l in labels]
+    label_counts = Counter(labels)
+
+    # Find label clusters that often occur together in documents
+    cluster_labels(y, doc_ids)
+
+    # label_stats(x, y, doc_ids, n=0)
     # plot_label_name_vs_freq(y)
     # incremental_label_stats(x, y, doc_ids)
-    create_subcorpora(x, y, doc_ids)
+    # create_subcorpora(x, y, doc_ids)
     # similar_labels = provision_type_similarity(vecs_per_label)
     # label_cooc(y, doc_ids)
 
-    """
-    print('Removing stopwords')
-    x_small = remove_stopwords(x_small)
-
-    print('Vectorizing')
-    x_small_tfidf = TfidfVectorizer(sublinear_tf=True, max_features=10000).fit_transform(x_small)
-    pdb.set_trace()
-
-    # Diversity of selected provisions
-    div = get_provision_diversity(x_small_tfidf, y_small)
-    pdb.set_trace()
-
-    # plot_label_pca_means(x_vec_means, y_means)
-
-    # TODO
-    # similarity of selected provisions
-    # avg. length of provisions, no. of labels, no. of provisions per label ...
-    """

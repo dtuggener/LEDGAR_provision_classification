@@ -171,8 +171,6 @@ if __name__ == '__main__':
     graph, sparse_roots = prune_sparse_roots(graph)
     sparse_roots = {' '.join(l) for l in sparse_roots}
 
-    breakpoint()
-
     # Split labels into parents with sufficient support
     #label_merges = map_lowfreq_labels(graph, min_freq=100)
     #label_set_size = len(set([l for labels in label_merges.values() for l in labels]))
@@ -213,6 +211,7 @@ if __name__ == '__main__':
 
     x, y, doc_ids = new_x, new_y, new_doc_ids
     label_set = set([l for labels in y for l in labels])
+    breakpoint()
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_projected_real_roots.jsonl'), 'w',  encoding='utf8') as f:

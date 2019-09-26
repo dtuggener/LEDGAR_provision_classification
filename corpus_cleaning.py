@@ -176,15 +176,37 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
+    label_counts = Counter([l for labels in y for l in labels])
+
     x, y, doc_ids = unique_data(x, y, doc_ids)
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
+
     y = split_conjuncted_labels(y)
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
+
     y = merge_plural_label_names(y)
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
+
     lowfreq_labels = identify_lowfreq_labels(x, y, doc_ids, min_doc_freq=5)
     x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=lowfreq_labels)
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
 
     outlier_labels = get_outlier_labels(y, doc_ids, do_plot=True)
-    breakpoint()
     x, y, doc_ids = remove_labels(x, y, doc_ids, drop_labels=outlier_labels)
+    label_set = set(l for labels in y for l in labels)
+    ml = 100 * len([l for l in y if len(l) > 1]) / len(y)
+    print(len(label_set), 'labels', round(ml, 2), '% multilabels', len(x), 'provisions', len(set(doc_ids)), 'contracts')
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_clean.jsonl'), 'w',  encoding='utf8') as f:

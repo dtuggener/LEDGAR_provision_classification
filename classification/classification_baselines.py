@@ -78,14 +78,21 @@ def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier,
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = False
+    predict_with_labelnames = True
     do_train = True
 
     #corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     #classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
-    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
+    #corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    #classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
+
+    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
+
+    #corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
+    #classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
+
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
