@@ -35,7 +35,7 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
 
 if __name__ == '__main__':
 
-    train_de = True
+    train_de = False
     test_de = True
 
     model_name = 'MLP_avg_tfidf_NDA.h5'
@@ -63,6 +63,7 @@ if __name__ == '__main__':
     print('Preprocessing')
     train_x = embed(dataset.x_train, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
     test_x = embed(dataset.x_test, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
+    dev_x = embed(dataset.x_dev, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
 
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
@@ -78,9 +79,13 @@ if __name__ == '__main__':
         print('Loading model')
         model = keras.models.load_model('saved_models/%s' % model_name)
 
-    # TODO clf threshold tuning
-
+    y_pred_bin_dev = model.predict(dev_x)
+    label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb)
     y_pred_bin = model.predict(test_x)
-    y_pred = stringify_labels(y_pred_bin, mlb)
-    evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
+    y_pred_thresh = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
+    y_pred_nothresh = stringify_labels(y_pred_bin, mlb)
+    print('MLP results without classifier threshold tuning')
+    evaluate_multilabels(dataset.y_test, y_pred_nothresh, do_print=True)
+    print('MLP results with classifier threshold tuning')
+    evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
 
