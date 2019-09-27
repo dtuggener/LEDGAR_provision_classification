@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.linear_model import LogisticRegression
-from utils import split_corpus, SplitDataSet, evaluate_multilabels
+from utils import split_corpus, SplitDataSet, evaluate_multilabels, tune_clf_thresholds
 
 
 def train_classifiers(x_train: numpy.array, y_train: numpy.array) -> OneVsRestClassifier:
@@ -52,43 +52,20 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
     return y_preds
 
 
-def tune_clf_thresholds(test_x, test_y, classifier: OneVsRestClassifier,
-                        mlb: MultiLabelBinarizer) -> Tuple[numpy.array, Dict[str, float]]:
-    y_pred_vecs = classifier.predict_proba(test_x)
-    thresh_range = [t / 100.0 for t in range(1, 100)]
-    all_results = dict()
-    for thresh in thresh_range:
-        y_pred = stringify_labels(y_pred_vecs, mlb, thresh=thresh)
-        eval_results = evaluate_multilabels(test_y, y_pred, do_print=False)
-        all_results[thresh] = eval_results
-
-    label_threshs: Dict[str, float] = dict()
-    for label in mlb.classes_:
-        best_thresh, best_f1 = min(thresh_range), 0.0
-        for t in thresh_range:
-            if all_results[t][label]['f1'] >= best_f1:  # Changing this to '>' favors recall more.
-                # This search for the threshold should maybe incorporate
-                # the recall/precision imbalance for threholds with equal F1
-                best_thresh, best_f1 = t, all_results[t][label]['f1']
-        label_threshs[label] = best_thresh
-
-    y_pred = stringify_labels(y_pred_vecs, mlb, label_threshs=label_threshs)
-    return y_pred, label_threshs
-
-
 if __name__ == '__main__':
 
-    predict_with_labelnames = True
-    do_train = True
+    predict_with_labelnames = False
+    do_train = False
+    test_nda = True
 
     #corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     #classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
-    #corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
-    #classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
-    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
+    #corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    #classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
 
     #corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
     #classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
@@ -128,7 +105,8 @@ if __name__ == '__main__':
         with open(classifier_file, 'rb') as f:
             classifier = pickle.load(f)
 
-    _, label_threshs = tune_clf_thresholds(x_dev_vecs, dataset.y_dev, classifier, mlb)
+    y_preds_lr_probs_dev = classifier.predict_proba(x_dev_vecs)
+    label_threshs = tune_clf_thresholds(y_preds_lr_probs_dev, dataset.y_dev, mlb)
     y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
     y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
     y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
@@ -136,5 +114,21 @@ if __name__ == '__main__':
     evaluate_multilabels(dataset.y_test, y_preds_lr_no_tresh, do_print=True)
     print('LogReg results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
-    breakpoint()
+
+    if test_nda:
+        nda_file = '../nda_proprietary_data_sampled.jsonl'
+        print('Loading corpus from', nda_file)
+        dataset_nda: SplitDataSet = split_corpus(nda_file)
+        nda_x = dataset_nda.x_train + dataset_nda.x_test + dataset_nda.x_dev
+        nda_y = dataset_nda.y_train + dataset_nda.y_test + dataset_nda.y_dev
+        nda_x_vecs = tfidfizer.transform(nda_x)
+        nda_y_vecs = mlb.transform(nda_y)
+        y_preds_nda_probs = classifier.predict_proba(nda_x_vecs)
+        y_preds_nda = stringify_labels(y_preds_nda_probs, mlb, label_threshs=label_threshs)
+        y_preds_nda_nothresh = stringify_labels(y_preds_nda_probs, mlb)
+        print('LogReg results NDA without classifier threshold tuning')
+        evaluate_multilabels(nda_y, y_preds_nda_nothresh, do_print=True)
+        print('LogReg results NDA with classifier threshold tuning')
+        evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
+
 

@@ -84,9 +84,11 @@ if __name__ == '__main__':
             doc_ids_prop.append(labeled_provision['source'])
 
     label_set_prop = set(l for labels in y_prop for l in labels)
+    print('Sampled', len(label_set_prop), 'labels')
 
-    breakpoint()
-    # TODO only take those PTs from SEC that are actually annotated in proprietary data!!
+    # Only take those PTs from LEDGAR that are actually annotated in proprietary data
+    new_map = {l: v for l, v in label_map_baseform.items() if v in label_set_prop}
+    sampled_x, sampled_y, sampled_doc_ids = sample_provisions(x, y, doc_ids, new_map, base_forms)
 
     print('Writing output')
     with open(corpus_file.replace('.jsonl', '_NDA_PTs.jsonl'), 'w',  encoding='utf8') as f:

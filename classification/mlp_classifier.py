@@ -12,7 +12,7 @@ from collections import Counter
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from sklearn.preprocessing import MultiLabelBinarizer
-from utils import embed, SplitDataSet, split_corpus, stringify_labels, evaluate_multilabels
+from utils import embed, SplitDataSet, split_corpus, stringify_labels, evaluate_multilabels, tune_clf_thresholds
 
 
 def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
@@ -38,12 +38,12 @@ if __name__ == '__main__':
     train_de = True
     test_de = True
 
-    model_name = 'MLP_avg_tfidf_roots.h5'
+    model_name = 'MLP_avg_tfidf_NDA.h5'
 
     epochs = 50
     batch_size = 32
 
-    corpus_file = '../sec_corpus_2016-2019_clean_projected_roots.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -77,6 +77,8 @@ if __name__ == '__main__':
     else:
         print('Loading model')
         model = keras.models.load_model('saved_models/%s' % model_name)
+
+    # TODO clf threshold tuning
 
     y_pred_bin = model.predict(test_x)
     y_pred = stringify_labels(y_pred_bin, mlb)

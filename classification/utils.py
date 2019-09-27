@@ -208,6 +208,27 @@ def embed(x_s: List[str], embeddings: numpy.array, vocab: Dict, tfidfizer: Tfidf
     return numpy.array(x_vecs)
 
 
+def tune_clf_thresholds(y_pred_vecs: numpy.array, test_y: List[List[str]],
+                        mlb: MultiLabelBinarizer) -> Dict[str, float]:
+    thresh_range = [t / 100.0 for t in range(1, 100)]
+    all_results = dict()
+    for thresh in thresh_range:
+        y_pred = stringify_labels(y_pred_vecs, mlb, thresh=thresh)
+        eval_results = evaluate_multilabels(test_y, y_pred, do_print=False)
+        all_results[thresh] = eval_results
+
+    label_threshs: Dict[str, float] = dict()
+    for label in mlb.classes_:
+        best_thresh, best_f1 = min(thresh_range), 0.0
+        for t in thresh_range:
+            if all_results[t][label]['f1'] >= best_f1:  # Changing this to '>' favors recall more.
+                # This search for the threshold should maybe incorporate
+                # the recall/precision imbalance for threholds with equal F1
+                best_thresh, best_f1 = t, all_results[t][label]['f1']
+        label_threshs[label] = best_thresh
+    return label_threshs
+
+
 if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean_sampled.jsonl'
     ds = split_corpus(corpus_file)
