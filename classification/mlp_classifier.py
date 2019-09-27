@@ -37,6 +37,7 @@ if __name__ == '__main__':
 
     train_de = False
     test_de = True
+    test_nda = True
 
     model_name = 'MLP_avg_tfidf_NDA.h5'
 
@@ -59,11 +60,11 @@ if __name__ == '__main__':
     embedding_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_data.npy'
     vocab_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_vocab.json'
     embeddings = numpy.load(embedding_file)
-    vocab_de = json.load(open(vocab_file))
+    vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
-    train_x = embed(dataset.x_train, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
-    test_x = embed(dataset.x_test, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
-    dev_x = embed(dataset.x_dev, embeddings, vocab_de, use_tfidf=True, avg_method='mean')
+    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
 
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
@@ -89,3 +90,18 @@ if __name__ == '__main__':
     print('MLP results with classifier threshold tuning')
     evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
 
+    if test_nda:
+        nda_file = '../nda_proprietary_data_sampled.jsonl'
+        print('Loading corpus from', nda_file)
+        dataset_nda: SplitDataSet = split_corpus(nda_file)
+        nda_x = dataset_nda.x_train + dataset_nda.x_test + dataset_nda.x_dev
+        nda_y = dataset_nda.y_train + dataset_nda.y_test + dataset_nda.y_dev
+        nda_x_vecs = embed(nda_x, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+        nda_y_vecs = mlb.transform(nda_y)
+        y_preds_nda_probs = model.predict(nda_x_vecs)
+        y_preds_nda = stringify_labels(y_preds_nda_probs, mlb, label_threshs=label_threshs)
+        y_preds_nda_nothresh = stringify_labels(y_preds_nda_probs, mlb)
+        print('MLP results NDA without classifier threshold tuning')
+        evaluate_multilabels(nda_y, y_preds_nda_nothresh, do_print=True)
+        print('MLP results NDA with classifier threshold tuning')
+        evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
