@@ -35,16 +35,17 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
 
 if __name__ == '__main__':
 
-    train_de = False
+    train_de = True
     test_de = True
-    test_nda = True
+    test_nda = False
 
-    model_name = 'MLP_avg_tfidf_NDA.h5'
+    # model_name = 'MLP_avg_tfidf_NDA.h5'
+    # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    model_name = 'MLP_avg_tfidf_proto.h5'
+    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
 
     epochs = 50
     batch_size = 32
-
-    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)

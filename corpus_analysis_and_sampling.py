@@ -218,7 +218,7 @@ def cluster_labels(y, doc_ids):
 
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
 
     x: List[str] = []
     y: List[List[str]] = []
@@ -234,13 +234,18 @@ if __name__ == '__main__':
     labels = [l for labels in y for l in labels]
     label_counts = Counter(labels)
 
+    create_subcorpora(x, y, doc_ids)
+
     # Find label clusters that often occur together in documents
-    cluster_labels(y, doc_ids)
+    # cluster_labels(y, doc_ids)
 
     # label_stats(x, y, doc_ids, n=0)
+
     # plot_label_name_vs_freq(y)
+
     # incremental_label_stats(x, y, doc_ids)
-    # create_subcorpora(x, y, doc_ids)
+
     # similar_labels = provision_type_similarity(vecs_per_label)
+
     # label_cooc(y, doc_ids)
 

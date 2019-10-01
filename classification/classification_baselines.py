@@ -1,4 +1,5 @@
 import numpy; numpy.random.seed(42)
+import re
 import pickle
 from typing import List, Dict, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -46,7 +47,12 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
         print(i, '\r', end='', flush=True)
         y_pred = []
         for label in label_set:
-            if label in x.lower() or (label.endswith('s') and label[:-1] in x.lower()):
+            # TODO require word boundaries, i.e. \b+x.lower()+\b
+            breakpoint()
+            if '_' in label:
+                label = label.replace('_', ' ')
+            if re.match(r'\b'+label+'\b', x.lower()) or (label.endswith('s') and re.match(r'\b'+label[:-1]+'\b', x.lower())):
+            # if label in x.lower() or (label.endswith('s') and label[:-1] in x.lower()):
                 y_pred.append(label)
         y_preds.append(y_pred)
     return y_preds
@@ -54,22 +60,21 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = False
+    predict_with_labelnames = True
     do_train = False
-    test_nda = True
+    test_nda = False
 
-    #corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
-    #classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
+    # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    # classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
     corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
     classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
-    #corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
-    #classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
+    # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    # classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
 
-    #corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
-    #classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
-
+    # corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
+    # classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
