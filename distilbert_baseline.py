@@ -198,8 +198,6 @@ def evaluate(eval_dataset, model):
                     axis=0,
                 )
 
-    preds = np.tanh(preds)
-
     return {
         'pred': preds,
         'truth': out_label_ids,
@@ -211,7 +209,11 @@ def tune_threshs(probas, truth):
 
     for i in range(probas.shape[1]):
         thresh = max(
-            np.linspace(-1.0, 1.0, num=100),  # we use tanh instead of sigmoid so it's not technicallly probas
+            np.linspace(
+                np.min(probas[:, i]),
+                np.max(probas[:, i]),
+                num=100,
+            ),
             key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t))
         )
         res[i] = thresh
@@ -291,11 +293,12 @@ def main():
     )
 
     print("Result:")
-    evaluate_multilabels(
+    res = evaluate_multilabels(
         y=multihot_to_label_lists(prediction_data['truth'], don_data.label_map),
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
         do_print=True,
     )
+    print(res)
 
 
 if __name__ == '__main__':
