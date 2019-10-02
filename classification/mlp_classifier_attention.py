@@ -8,17 +8,18 @@ import re
 from typing import List
 from collections import Counter
 from sklearn.preprocessing import MultiLabelBinarizer
-from keras.layers import Input, Embedding, TimeDistributed, Dense, \
+
+from tensorflow.keras.layers import Input, Embedding, TimeDistributed, Dense, \
     GlobalAveragePooling1D, Multiply, Lambda
-from keras.models import Model, load_model
-from keras.preprocessing.sequence import pad_sequences
-from keras.utils import plot_model
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.utils import plot_model
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds
 
 
 def my_repeat_vecs(x, rep, axis):
-    from keras.backend import repeat_elements
+    from tensorflow.keras.backend import repeat_elements
     return repeat_elements(x, rep, axis)
 
 
@@ -113,7 +114,7 @@ if __name__ == '__main__':
         class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
                         label_counts.items()}
 
-        model.fit(train_x, train_y, epochs=50, verbose=2,  class_weight=class_weight)
+        model.fit(train_x, train_y, epochs=50, verbose=1,  class_weight=class_weight)
         model.save('saved_models/%s' % model_name, overwrite=True)
     else:
         model = load_model('saved_models/%s' % model_name)

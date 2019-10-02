@@ -5,11 +5,11 @@ Keras MLP classifier for provision classification using TF IDF weighted averaged
 import json
 import random; random.seed(42)
 import numpy; numpy.random.seed(42)
-import keras
+import tensorflow.keras as keras
 from typing import List
 from collections import Counter
-from keras.models import Sequential
-from keras.layers import Dropout, Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dropout, Dense
 from sklearn.preprocessing import MultiLabelBinarizer
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds
@@ -35,7 +35,7 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
 
 if __name__ == '__main__':
 
-    train_de = True
+    train_de = False
     test_de = True
     test_nda = False
 
