@@ -80,7 +80,7 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
         if not cnts['tp'] == 0:
             prec = cnts['tp'] / (cnts['tp'] + cnts['fp'])
             rec = cnts['tp'] / (cnts['tp'] + cnts['fn'])
-            f1 = 2 * prec * rec / (prec + rec)
+            f1 = (2 * prec * rec) / (prec + rec)
         else:
             prec, rec, f1 = 0.00, 0.00, 0.00
         eval_results[label]['prec'] = prec
@@ -99,18 +99,23 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
 
     eval_results['Macro']['prec'] = sum(all_prec) / len(all_prec)
     eval_results['Macro']['rec'] = sum(all_rec) / len(all_rec)
-    eval_results['Macro']['f1'] = sum(all_f1) / len(all_f1)
+    eval_results['Macro']['f1'] = (2 * eval_results['Macro']['prec'] * eval_results['Macro']['rec']) / (eval_results['Macro']['prec'] + eval_results['Macro']['rec'])
     eval_results['Macro']['support'] = len(y)
 
     # Micro
     all_tp = sum(label_eval[label]['tp'] for label in label_eval)
     all_fp = sum(label_eval[label]['fp'] for label in label_eval)
     all_fn = sum(label_eval[label]['fn'] for label in label_eval)
-    eval_results['Micro']['prec'] = all_tp / (all_tp + all_fp)
-    eval_results['Micro']['rec'] = all_tp / (all_tp + all_fn)
-    micro_prec = eval_results['Micro']['prec']
-    micro_rec = eval_results['Micro']['rec']
-    eval_results['Micro']['f1'] = 2 * (micro_rec * micro_prec) / (micro_rec + micro_prec)
+    if all_fp == 0:
+        eval_results['Micro']['prec'] = 0
+        eval_results['Micro']['rec'] = 0
+        eval_results['Micro']['f1'] = 0
+    else:
+        eval_results['Micro']['prec'] = all_tp / (all_tp + all_fp)
+        eval_results['Micro']['rec'] = all_tp / (all_tp + all_fn)
+        micro_prec = eval_results['Micro']['prec']
+        micro_rec = eval_results['Micro']['rec']
+        eval_results['Micro']['f1'] = (2 * micro_rec * micro_prec) / (micro_rec + micro_prec)
     eval_results['Micro']['support'] = len(y)
 
     if do_print:

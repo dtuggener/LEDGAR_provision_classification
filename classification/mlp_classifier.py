@@ -29,7 +29,7 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
     print('Train model...')
-    model.fit(x_train, y_train, batch_size=batch_size, shuffle=True, epochs=epochs, verbose=2, validation_split=0., class_weight=class_weight)
+    model.fit(x_train, y_train, batch_size=batch_size, shuffle=True, epochs=epochs, verbose=1, validation_split=0., class_weight=class_weight)
     return model
 
 
@@ -39,10 +39,11 @@ if __name__ == '__main__':
     test_de = True
     test_nda = False
 
+    model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
-    # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
-    model_name = 'MLP_avg_tfidf_proto.h5'
-    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    # model_name = 'MLP_avg_proto.h5'
+    # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
 
     epochs = 50
     batch_size = 32
@@ -63,9 +64,9 @@ if __name__ == '__main__':
     embeddings = numpy.load(embedding_file)
     vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
-    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
-    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
-    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
+    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
+    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
 
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]

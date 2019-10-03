@@ -47,12 +47,10 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
         print(i, '\r', end='', flush=True)
         y_pred = []
         for label in label_set:
-            # TODO require word boundaries, i.e. \b+x.lower()+\b
-            breakpoint()
             if '_' in label:
                 label = label.replace('_', ' ')
-            if re.match(r'\b'+label+'\b', x.lower()) or (label.endswith('s') and re.match(r'\b'+label[:-1]+'\b', x.lower())):
-            # if label in x.lower() or (label.endswith('s') and label[:-1] in x.lower()):
+            if re.search(r'\b%s\b' % label, x.lower()) \
+                    or (label.endswith('s') and re.search(r'\b%s\b' % label[:-1], x.lower())):
                 y_pred.append(label)
         y_preds.append(y_pred)
     return y_preds
