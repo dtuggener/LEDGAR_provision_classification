@@ -88,12 +88,15 @@ if __name__ == '__main__':
     num_classes = mlb.classes_.shape[0]
     train_y = mlb.transform(dataset.y_train)
     test_y = mlb.transform(dataset.y_test)
+    dev_y = mlb.transform(dataset.y_dev)
 
     train_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_train]
     test_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_test]
+    dev_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_dev]
     max_sent_length = max([len(x_) for x_ in train_x_int])
     train_x = pad_sequences(train_x_int, max_sent_length)
     test_x = pad_sequences(test_x_int, max_sent_length)
+    dev_x = pad_sequences(dev_x_int, max_sent_length)
 
     # Remove zero-valued training examples and labels; they break fit()!
     zero_ixs = [i for i, x_ in enumerate(train_x) if sum(x_) == 0]
@@ -114,7 +117,15 @@ if __name__ == '__main__':
         class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
                         label_counts.items()}
 
-        model.fit(train_x, train_y, epochs=50, verbose=1,  class_weight=class_weight)
+        early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                                  patience=3, restore_best_weights=True)
+
+        tensor_board = tensorflow.keras.callbacks.TensorBoard()
+
+        model.fit(train_x, train_y, epochs=50, verbose=1,
+                  validation_data=(dev_x, dev_y),
+                  class_weight=class_weight, callbacks=[early_stopping, tensor_board])
+
         model.save('saved_models/%s' % model_name, overwrite=True)
     else:
         model = load_model('saved_models/%s' % model_name)
