@@ -19,6 +19,21 @@ class SplitDataSet:
     y_dev: Union[List[List[str]], None]
 
 
+"""
+# python3.6
+class SplitDataSet:
+    def __init__(self, x_train, y_train,
+                 x_test, y_test,
+                 x_dev=None, y_dev=None):
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+        self.x_dev = x_dev
+        self.y_dev = y_dev
+"""
+
+
 def split_corpus(corpus_file: str, use_dev: bool = True,
                  test_size: float = 0.2, dev_size: Union[float, None] = 0.1,
                  random_state: int = 42) -> SplitDataSet:
@@ -99,7 +114,8 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
 
     eval_results['Macro']['prec'] = sum(all_prec) / len(all_prec)
     eval_results['Macro']['rec'] = sum(all_rec) / len(all_rec)
-    eval_results['Macro']['f1'] = (2 * eval_results['Macro']['prec'] * eval_results['Macro']['rec']) / (eval_results['Macro']['prec'] + eval_results['Macro']['rec'])
+    eval_results['Macro']['f1'] = (2 * eval_results['Macro']['prec'] * eval_results['Macro']['rec']) / \
+                                  (eval_results['Macro']['prec'] + eval_results['Macro']['rec'])
     eval_results['Macro']['support'] = len(y)
 
     # Micro

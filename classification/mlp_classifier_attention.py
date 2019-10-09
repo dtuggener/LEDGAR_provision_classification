@@ -68,11 +68,11 @@ if __name__ == '__main__':
     do_test = True
     classification_thresh = 0.5
 
-    corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
     model_name = 'saved_models/MLP_attn_proto.h5'
 
-    embedding_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_data.npy'
-    vocab_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_vocab.json'
+    embedding_file = 'data/wiki.multi.en.vec_data.npy'
+    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
     embeddings = numpy.load(embedding_file)
     vocab = json.load(open(vocab_file))
     int2vocab = {i: w for  w, i in vocab.items()}
