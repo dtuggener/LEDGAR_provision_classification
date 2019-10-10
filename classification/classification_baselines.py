@@ -66,7 +66,7 @@ if __name__ == '__main__':
     # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
@@ -113,14 +113,14 @@ if __name__ == '__main__':
         label_threshs = tune_clf_thresholds(y_preds_lr_probs_dev, dataset.y_dev, mlb)
         y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
         y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
-        y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
-        print('LogReg results without classifier threshold tuning')
-        evaluate_multilabels(dataset.y_test, y_preds_lr_no_tresh, do_print=True)
+        # y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
+        # print('LogReg results without classifier threshold tuning')
+        # evaluate_multilabels(dataset.y_test, y_preds_lr_no_tresh, do_print=True)
         print('LogReg results with classifier threshold tuning')
         evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
     if test_nda:
-        nda_file = 'data/nda_proprietary_data_sampled.jsonl'
+        nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
         dataset_nda: SplitDataSet = split_corpus(nda_file)
 
@@ -154,14 +154,14 @@ if __name__ == '__main__':
 
         # Join proprietary data and LEDGAR data; use separate TF IDF # TODO really? Use TFIDF of prop data
         print('Mixed: train on LEDGAR and proprietary, predict proprietary')
-        x_train = dataset.x_train + dataset_nda.x_train
+        x_train = dataset.x_train + dataset_nda.x_train[:int(len(dataset_nda.x_train)/4)]
 
         tfidfizer_mixed = TfidfVectorizer(sublinear_tf=True)
         x_train_vecs = tfidfizer_mixed.fit_transform(x_train)
         x_dev_vecs = tfidfizer_mixed.transform(dataset_nda.x_dev)
         x_test_vecs = tfidfizer_mixed.transform(dataset_nda.x_test)
 
-        y_train = dataset.y_train + dataset_nda.y_train
+        y_train = dataset.y_train + dataset_nda.y_train[:int(len(dataset_nda.x_train)/4)]
 
         classifier_mixed = train_classifiers(x_train_vecs, mlb.transform(y_train))
 

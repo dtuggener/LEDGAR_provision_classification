@@ -69,7 +69,7 @@ if __name__ == '__main__':
     classification_thresh = 0.5
 
     corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    model_name = 'saved_models/MLP_attn_proto.h5'
+    model_name = 'MLP_attn_proto.h5'
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     else:
         model = load_model('saved_models/%s' % model_name)
 
-    plot_model(model, to_file='/tmp/%s.png' % model_name)
+    # plot_model(model, to_file='/tmp/%s.png' % model_name)
 
     if do_test:
         y_pred_bin = model.predict(test_x)

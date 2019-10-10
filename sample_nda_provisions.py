@@ -66,7 +66,7 @@ if __name__ == '__main__':
     print('Found {} of {} labels'.format(len(label_set_sampled), len(set(label_map_baseform.values()))))
 
     # Read proprietary data
-    prop_data_file = 'nda_proprietary_data.jsonl'
+    prop_data_file = 'nda_proprietary_data2.jsonl'
     print('Loading data from', prop_data_file)
 
     x_prop: List[str] = []
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     sampled_x, sampled_y, sampled_doc_ids = sample_provisions(x, y, doc_ids, new_map, base_forms)
 
     print('Writing output')
-    with open(corpus_file.replace('.jsonl', '_NDA_PTs.jsonl'), 'w',  encoding='utf8') as f:
+    with open(corpus_file.replace('.jsonl', '_NDA_PTs2.jsonl'), 'w',  encoding='utf8') as f:
         for provision, labels, doc_id in zip(sampled_x, sampled_y, sampled_doc_ids):
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')
