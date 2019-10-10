@@ -14,6 +14,7 @@ from tensorflow.keras.layers import Input, Embedding, TimeDistributed, Dense, \
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import plot_model
+from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds
 
@@ -68,8 +69,11 @@ if __name__ == '__main__':
     do_test = True
     classification_thresh = 0.5
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    model_name = 'MLP_attn_proto.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+    # model_name = 'MLP_attn_proto.h5'
+
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    model_name = 'MLP_attn_NDA.h5'
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
@@ -117,14 +121,14 @@ if __name__ == '__main__':
         class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
                         label_counts.items()}
 
-        early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                  patience=3, restore_best_weights=True)
-
-        tensor_board = tensorflow.keras.callbacks.TensorBoard()
+        early_stopping = EarlyStopping(monitor='val_loss', patience=3,
+                                       restore_best_weights=True)
+        tensor_board = TensorBoard()
 
         model.fit(train_x, train_y, epochs=50, verbose=1,
                   validation_data=(dev_x, dev_y),
-                  class_weight=class_weight, callbacks=[early_stopping, tensor_board])
+                  class_weight=class_weight,
+                  callbacks=[early_stopping, tensor_board])
 
         model.save('saved_models/%s' % model_name, overwrite=True)
     else:

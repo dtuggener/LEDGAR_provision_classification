@@ -46,22 +46,21 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
     for i, x in enumerate(x_test):
         print(i, '\r', end='', flush=True)
         y_pred = []
-        for label in label_set:
-            if '_' in label:
-                label = label.replace('_', ' ')
+        for orig_label in label_set:
+            label = orig_label.replace('_', ' ')
             if re.search(r'\b%s\b' % label, x.lower()) \
                     or (label.endswith('s') and re.search(r'\b%s\b' % label[:-1], x.lower())):
-                y_pred.append(label)
+                y_pred.append(orig_label)
         y_preds.append(y_pred)
     return y_preds
 
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = False
-    do_train = False
-    do_test = False
-    test_nda = True
+    predict_with_labelnames = True
+    do_train = True
+    do_test = True
+    test_prop_nda = False
 
     # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
@@ -119,7 +118,7 @@ if __name__ == '__main__':
         print('LogReg results with classifier threshold tuning')
         evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
-    if test_nda:
+    if test_prop_nda:
         nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
         dataset_nda: SplitDataSet = split_corpus(nda_file)

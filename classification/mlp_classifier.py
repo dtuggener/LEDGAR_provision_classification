@@ -10,12 +10,13 @@ from typing import List
 from collections import Counter
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dropout, Dense
+from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from sklearn.preprocessing import MultiLabelBinarizer
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds
 
 
-def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
+def build_model(x_train, num_classes):
     print('Building model...')
     input_shape = x_train[0].shape[0]
     hidden_size_1 = input_shape * 2
@@ -28,20 +29,18 @@ def train(x_train, y_train, num_classes, batch_size, epochs, class_weight=None):
     model.add(Dense(num_classes, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
-    print('Train model...')
-    model.fit(x_train, y_train, batch_size=batch_size, shuffle=True, epochs=epochs, verbose=1, validation_split=0., class_weight=class_weight)
     return model
 
 
 if __name__ == '__main__':
 
-    train_de = False
+    train_de = True
     test_de = True
     test_nda = False
 
     model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
-    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs.jsonl'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # model_name = 'MLP_avg_proto.h5'
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
 
@@ -58,26 +57,37 @@ if __name__ == '__main__':
     num_classes = mlb.classes_.shape[0]
     train_y = mlb.transform(dataset.y_train)
     test_y = mlb.transform(dataset.y_test)
+    dev_y = mlb.transform(dataset.y_dev)
 
     embedding_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_data.npy'
     vocab_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_vocab.json'
     embeddings = numpy.load(embedding_file)
     vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
-    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
-    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
-    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=False, avg_method='mean')
+    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
 
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
     label_counts = Counter(all_labels)
     sum_labels_counts = sum(label_counts.values())
-    class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt/sum_labels_counts) for label, cnt in label_counts.items()}
+    class_weight = {numpy.where(mlb.classes_ == label)[0][0]:
+                        1 - (cnt/sum_labels_counts)
+                    for label, cnt in label_counts.items()}
 
     if train_de:
-        print('Training model')
-        model = train(train_x, train_y, num_classes, batch_size, epochs, class_weight=class_weight)
+        model = build_model(train_x, num_classes)
+        early_stopping = EarlyStopping(monitor='val_loss',
+                                       patience=3, restore_best_weights=True)
+        tensor_board = TensorBoard()
+        print('Train model...')
+        model.fit(train_x, train_y, batch_size=batch_size, epochs=epochs,
+                  verbose=1, validation_data=(dev_x, dev_y),
+                  class_weight=class_weight,
+                  callbacks=[early_stopping, tensor_board])
         model.save('saved_models/%s' % model_name, overwrite=True)
+
     else:
         print('Loading model')
         model = keras.models.load_model('saved_models/%s' % model_name)
