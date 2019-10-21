@@ -97,18 +97,26 @@ if __name__ == '__main__':
     train_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_train]
     test_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_test]
     dev_x_int = [[vocab[w] for w in re.findall('\w+', x_) if w in vocab] for x_ in dataset.x_dev]
+
     max_sent_length = max([len(x_) for x_ in train_x_int])
     train_x = pad_sequences(train_x_int, max_sent_length)
     test_x = pad_sequences(test_x_int, max_sent_length)
     dev_x = pad_sequences(dev_x_int, max_sent_length)
 
     # Remove zero-valued training examples and labels; they break fit()!
-    zero_ixs = [i for i, x_ in enumerate(train_x) if sum(x_) == 0]
+    zero_ixs = [i for i, x_ in enumerate(train_x_int) if not  x_]
     train_x = numpy.delete(train_x, zero_ixs, axis=0)
     train_x_int = numpy.delete(train_x_int, zero_ixs, axis=0)
     train_x_str = numpy.delete(dataset.x_test, zero_ixs, axis=0)
     train_y = numpy.delete(train_y, zero_ixs, axis=0)
     train_y_str = numpy.delete(dataset.y_train, zero_ixs, axis=0)
+
+    zero_ixs = [i for i, x_ in enumerate(dev_x_int) if not x_]
+    dev_x = numpy.delete(dev_x, zero_ixs, axis=0)
+    dev_x_int = numpy.delete(dev_x_int, zero_ixs, axis=0)
+    dev_x_str = numpy.delete(dataset.x_dev, zero_ixs, axis=0)
+    dev_y = numpy.delete(dev_y, zero_ixs, axis=0)
+    dev_y_str = numpy.delete(dataset.y_dev, zero_ixs, axis=0)
 
     if do_train:
         model = build_model(max_sent_length, vocab, embeddings, num_classes)
@@ -121,12 +129,13 @@ if __name__ == '__main__':
         class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
                         label_counts.items()}
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=3,
+        early_stopping = EarlyStopping(monitor='accuracy', patience=3,
                                        restore_best_weights=True)
         tensor_board = TensorBoard()
-
-        model.fit(train_x, train_y, epochs=50, verbose=1,
-                  validation_data=(dev_x, dev_y),
+        model.fit(train_x[:100], train_y[:100], batch_size=32, epochs=50,
+                  verbose=1,
+                  # validation_data=(dev_x, dev_y),
+                  # validation_split=0.1,
                   class_weight=class_weight,
                   callbacks=[early_stopping, tensor_board])
 

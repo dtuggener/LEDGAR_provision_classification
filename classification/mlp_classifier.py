@@ -37,6 +37,7 @@ if __name__ == '__main__':
     train_de = True
     test_de = True
     test_nda = False
+    use_tfidf = True
 
     model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
@@ -64,9 +65,9 @@ if __name__ == '__main__':
     embeddings = numpy.load(embedding_file)
     vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
-    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
-    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
-    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+    train_x = embed(dataset.x_train, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
+    test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
+    dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
 
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
@@ -103,12 +104,12 @@ if __name__ == '__main__':
     evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
 
     if test_nda:
-        nda_file = '../nda_proprietary_data_sampled.jsonl'
+        nda_file = '../nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
         dataset_nda: SplitDataSet = split_corpus(nda_file)
         nda_x = dataset_nda.x_train + dataset_nda.x_test + dataset_nda.x_dev
         nda_y = dataset_nda.y_train + dataset_nda.y_test + dataset_nda.y_dev
-        nda_x_vecs = embed(nda_x, embeddings, vocab_en, use_tfidf=True, avg_method='mean')
+        nda_x_vecs = embed(nda_x, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
         nda_y_vecs = mlb.transform(nda_y)
         y_preds_nda_probs = model.predict(nda_x_vecs)
         y_preds_nda = stringify_labels(y_preds_nda_probs, mlb, label_threshs=label_threshs)
