@@ -361,14 +361,14 @@ def build_arg_parser():
         default=True,
         type=bool,
         required=False,
-        help="use balanced class weights for training"
+        help="use balanced class weights for training, default True"
     )
     parser.add_argument(
         "--seed",
         default=0xDEADBEEF,
         type=int,
         required=False,
-        help="seed for random number generation",
+        help="seed for random number generation, default 0xDEADBEEF",
     )
 
     parser.add_argument(
@@ -376,56 +376,56 @@ def build_arg_parser():
         default=128,
         type=int,
         required=False,
-        help="maximum sequence length in transformer",
+        help="maximum sequence length in transformer, default 128",
     )
     parser.add_argument(
         "--batch_size",
         default=8,
         type=int,
         required=False,
-        help="training batch size, defaults to 8",
+        help="training batch size, default 8",
     )
     parser.add_argument(
         "--epochs",
         default=1,
         type=int,
         required=False,
-        help="number of epochs of training",
+        help="number of epochs of training, default 1",
     )
     parser.add_argument(
         "--weight_decay",
         default=0.0,
         type=float,
         required=False,
-        help="AdamW weight decay",
+        help="AdamW weight decay, default 0.0",
     )
     parser.add_argument(
         "--learning_rate",
         default=5e-5,
         type=float,
         required=False,
-        help="AdamW learning rate",
+        help="AdamW learning rate, default 5e-5",
     )
     parser.add_argument(
         "--adam_epsilon",
         default=1e-8,
         type=float,
         required=False,
-        help="AdamW epsilon",
+        help="AdamW epsilon, default 1e-8",
     )
     parser.add_argument(
         "--warmup_steps",
         default=0,
         type=int,
         required=False,
-        help="Warmup steps for learning rate schedule",
+        help="Warmup steps for learning rate schedule, default 0",
     )
     parser.add_argument(
         "--max_grad_norm",
         default=1.0,
         type=float,
         required=False,
-        help="max norm for gradient clipping",
+        help="max norm for gradient clipping, default 1.0",
     )
     return parser
 
