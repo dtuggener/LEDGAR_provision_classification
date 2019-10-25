@@ -46,6 +46,12 @@ class DonData(object):
             'label': multihot(lbls, self.label_map),
         } for x, lbls in zip(self.don_data.x_test, self.don_data.y_test)]
 
+    def dev(self):
+        return [{
+            'txt': x,
+            'label': multihot(lbls, self.label_map),
+        } for x, lbls in zip(self.don_data.x_dev, self.don_data.y_dev)]
+
 
 class ListData(object):
 
