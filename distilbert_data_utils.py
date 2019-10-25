@@ -34,6 +34,13 @@ class DonData(object):
             for i, label in enumerate(self.all_lbls)
         }
 
+        total = 0
+        self.class_weights = np.zeros(len(self.label_map))
+        for sample in self.train():
+            self.class_weights += sample['label']
+            total += 1
+        self.class_weights = total / (len(self.label_map) * self.class_weights)
+
     def train(self):
         return [{
             'txt': x,

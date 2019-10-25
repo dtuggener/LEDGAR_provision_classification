@@ -47,6 +47,7 @@ class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
             attention_mask=None,
             head_mask=None,
             labels=None,
+            class_weights=None,
     ):
         distilbert_output = self.distilbert(
             input_ids=input_ids,
@@ -68,6 +69,7 @@ class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
             else:
                 loss_fct = nn.BCEWithLogitsLoss(
                     reduction='mean',
+                    pos_weight=class_weights,
                 )
                 loss = loss_fct(logits, labels)
             outputs = (loss,) + outputs
@@ -81,7 +83,7 @@ def set_seed(seed):
     torch.manual_seed(seed)
 
 
-def train(train_dataset, model):
+def train(train_dataset, model, class_weights=None):
     # TODO: magic numbers, defaults in run_glue.py
     batch_size = 8
     n_epochs = 1
@@ -99,6 +101,9 @@ def train(train_dataset, model):
         sampler=train_sampler,
         batch_size=batch_size,
     )
+
+    if class_weights is not None:
+        class_weights = torch.from_numpy(class_weights)
 
     no_decay = {'bias', 'LayerNorm.weight'}
     optimizer_grouped_parameters = [
@@ -143,6 +148,7 @@ def train(train_dataset, model):
                 'attention_mask': batch[1],
                 #'token_type_ids': batch[2],  # probably used for distilbert
                 'labels': batch[3],
+                'class_weights': class_weights,
             }
 
             outputs = model(**inputs)
