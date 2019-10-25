@@ -25,7 +25,7 @@ from tqdm import tqdm, trange
 import numpy as np
 
 from distilbert_data_utils import DonData, convert_examples_to_features
-from utils import evaluate_multilabels
+from classification.utils import evaluate_multilabels
 
 
 class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
@@ -83,8 +83,8 @@ def set_seed(seed):
 
 def train(train_dataset, model):
     # TODO: magic numbers, defaults in run_glue.py
-    batch_size = 32
-    n_epochs = 3
+    batch_size = 8
+    n_epochs = 1
     weight_decay = 0.0
     learning_rate = 5e-5
     adam_epsilon = 1e-8
@@ -248,7 +248,7 @@ def multihot_to_label_lists(label_array, label_map):
 def main():
     max_seq_length = 128
 
-    don_data = DonData(path='./data/sec_corpus_2016-2019_clean_proto.jsonl')
+    don_data = DonData(path='./data/sec_corpus_2016-2019_clean_NDA_PTs.jsonl')
 
     model_name = 'distilbert-base-uncased'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -274,7 +274,7 @@ def main():
     # eval
     print('construct test data tensor')
     eval_data = convert_examples_to_features(
-        examples=don_data.test(),
+        examples=don_data.dev(),
         max_seq_length=max_seq_length,
         tokenizer=tokenizer,
     )
@@ -298,7 +298,6 @@ def main():
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
         do_print=True,
     )
-    print(res)
 
 
 if __name__ == '__main__':
