@@ -104,7 +104,7 @@ def train(train_dataset, model, train_params, class_weights=None):
     )
 
     if class_weights is not None:
-        class_weights = torch.from_numpy(class_weights)
+        class_weights = torch.from_numpy(class_weights).double()
 
     no_decay = {'bias', 'LayerNorm.weight'}
     optimizer_grouped_parameters = [
@@ -136,6 +136,8 @@ def train(train_dataset, model, train_params, class_weights=None):
 
     global_step = 0
     tr_loss = 0.0
+    if not torch.cuda.is_available():
+        model.double()
     model.zero_grad()
     train_iter = trange(n_epochs, desc='Epoch')
     set_seed(seed=seed)
@@ -360,7 +362,7 @@ def build_arg_parser():
         "--use_class_weights",
         default=True,
         type=bool,
-        required=True,
+        required=False,
         help="use balanced class weights for training"
     )
     parser.add_argument(
