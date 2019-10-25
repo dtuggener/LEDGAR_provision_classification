@@ -104,7 +104,7 @@ def train(train_dataset, model, train_params, class_weights=None):
     )
 
     if class_weights is not None:
-        class_weights = torch.from_numpy(class_weights).double()
+        class_weights = torch.from_numpy(class_weights).double().to(device)
 
     no_decay = {'bias', 'LayerNorm.weight'}
     optimizer_grouped_parameters = [
