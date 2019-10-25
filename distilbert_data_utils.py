@@ -4,7 +4,7 @@ import itertools
 import torch
 from torch.utils.data import TensorDataset
 
-from utils import split_corpus
+from classification.utils import split_corpus
 
 import numpy as np
 
