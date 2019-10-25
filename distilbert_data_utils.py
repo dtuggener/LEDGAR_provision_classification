@@ -35,7 +35,7 @@ class DonData(object):
         }
 
         total = 0
-        self.class_weights = np.zeros(len(self.label_map))
+        self.class_weights = np.zeros(len(self.label_map), dtype=np.float32)
         for sample in self.train():
             self.class_weights += sample['label']
             total += 1
@@ -144,7 +144,7 @@ def convert_examples_to_features(
     input_id_tensor = torch.tensor(all_input_ids, dtype=torch.long)
     input_mask_tensor = torch.tensor(all_input_masks, dtype=torch.long)
     segment_id_tensor = torch.tensor(all_segment_ids, dtype=torch.long)
-    label_id_tensor = torch.tensor(all_label_ids, dtype=torch.double)
+    label_id_tensor = torch.tensor(all_label_ids, dtype=torch.float)
 
     return TensorDataset(
         input_id_tensor,
