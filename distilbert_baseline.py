@@ -257,6 +257,9 @@ def main():
     parser = build_arg_parser()
     args = parser.parse_args()
 
+    if args.mode not in {'test', 'dev'}:
+        raise ValueError(f"unknown mode {args.mode}, use 'test' or 'dev'")
+
     max_seq_length = args.max_seq_len
 
     don_data = DonData(path=args.data)
@@ -298,18 +301,30 @@ def main():
         class_weights=don_data.class_weights if args.use_class_weights else None,
     )
 
+    print('construct dev tensor')
+    dev_data = convert_examples_to_features(
+        examples=don_data.dev(),
+        max_seq_length=max_seq_length,
+        tokenizer=tokenizer,
+    )
+    print('predict dev set')
+    prediction_data = evaluate(eval_dataset=dev_data, model=model)
+
+    # tune thresholds
+    print('tuning clf thresholds on dev')
+    threshs = tune_threshs(
+        probas=prediction_data['pred'],
+        truth=prediction_data['truth'],
+    )
+
     # eval
     print('construct test data tensor')
     if args.mode == 'dev':
         print("using 'dev' for computing test performance")
-        eval_data = convert_examples_to_features(
-            examples=don_data.dev(),
-            max_seq_length=max_seq_length,
-            tokenizer=tokenizer,
-        )
+        test_data = dev_data
     elif args.mode == 'test':
         print("using 'test' for computing test performance")
-        eval_data = convert_examples_to_features(
+        test_data = convert_examples_to_features(
             examples=don_data.test(),
             max_seq_length=max_seq_length,
             tokenizer=tokenizer,
@@ -318,14 +333,10 @@ def main():
         raise ValueError(f"unknown test mode {args.mode}, use 'dev' or 'test'")
 
     print('predict test set')
-    prediction_data = evaluate(eval_dataset=eval_data, model=model)
+    prediction_data = evaluate(eval_dataset=test_data, model=model)
 
     # tune thresholds
-    print('tuning clf thresholds')
-    threshs = tune_threshs(
-        probas=prediction_data['pred'],
-        truth=prediction_data['truth'],
-    )
+    print('apply clf thresholds')
     predicted_mat = apply_threshs(
         probas=prediction_data['pred'],
         threshs=threshs,
