@@ -3,12 +3,13 @@ import numpy
 import re
 from typing import List, Union, Dict, DefaultDict, Tuple
 from collections import defaultdict
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
+"""
 @dataclass
 class SplitDataSet:
     x_train: List[str]
@@ -17,9 +18,8 @@ class SplitDataSet:
     y_test: List[List[str]]
     x_dev: Union[List[str], None]
     y_dev: Union[List[List[str]], None]
-
-
 """
+
 # python3.6
 class SplitDataSet:
     def __init__(self, x_train, y_train,
@@ -31,7 +31,6 @@ class SplitDataSet:
         self.y_test = y_test
         self.x_dev = x_dev
         self.y_dev = y_dev
-"""
 
 
 def split_corpus(corpus_file: str, use_dev: bool = True,
@@ -40,7 +39,7 @@ def split_corpus(corpus_file: str, use_dev: bool = True,
     x: List[str] = []
     y: List[List[str]] = []
     doc_ids: List[str] = []
-    for line in open(corpus_file):
+    for line in open(corpus_file, encoding='utf-8'):
         labeled_provision = json.loads(line)
         x.append(labeled_provision['provision'])
         y.append(labeled_provision['label'])

@@ -1,5 +1,6 @@
 
 import random
+import argparse
 
 import torch
 import torch.nn as nn
@@ -25,7 +26,7 @@ from tqdm import tqdm, trange
 import numpy as np
 
 from distilbert_data_utils import DonData, convert_examples_to_features
-from utils import evaluate_multilabels
+from classification.utils import evaluate_multilabels
 
 
 class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
@@ -47,6 +48,7 @@ class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
             attention_mask=None,
             head_mask=None,
             labels=None,
+            class_weights=None,
     ):
         distilbert_output = self.distilbert(
             input_ids=input_ids,
@@ -68,6 +70,7 @@ class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
             else:
                 loss_fct = nn.BCEWithLogitsLoss(
                     reduction='mean',
+                    pos_weight=class_weights,
                 )
                 loss = loss_fct(logits, labels)
             outputs = (loss,) + outputs
@@ -81,17 +84,17 @@ def set_seed(seed):
     torch.manual_seed(seed)
 
 
-def train(train_dataset, model):
+def train(train_dataset, model, train_params, class_weights=None):
     # TODO: magic numbers, defaults in run_glue.py
-    batch_size = 32
-    n_epochs = 3
-    weight_decay = 0.0
-    learning_rate = 5e-5
-    adam_epsilon = 1e-8
-    warmup_steps = 0
-    seed = 0xdeafbeef
+    batch_size = train_params['batch_size']
+    n_epochs = train_params['epochs']
+    weight_decay = train_params['weight_decay']
+    learning_rate = train_params['learning_rate']
+    adam_epsilon = train_params['adam_epsilon']
+    warmup_steps = train_params['warmup_steps']
+    seed = train_params['seed']
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    max_grad_norm = 1.0
+    max_grad_norm = train_params['max_grad_norm']
 
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
@@ -99,6 +102,9 @@ def train(train_dataset, model):
         sampler=train_sampler,
         batch_size=batch_size,
     )
+
+    if class_weights is not None:
+        class_weights = torch.from_numpy(class_weights).to(device)
 
     no_decay = {'bias', 'LayerNorm.weight'}
     optimizer_grouped_parameters = [
@@ -143,6 +149,7 @@ def train(train_dataset, model):
                 'attention_mask': batch[1],
                 #'token_type_ids': batch[2],  # probably used for distilbert
                 'labels': batch[3],
+                'class_weights': class_weights,
             }
 
             outputs = model(**inputs)
@@ -246,9 +253,13 @@ def multihot_to_label_lists(label_array, label_map):
 
 
 def main():
-    max_seq_length = 128
 
-    don_data = DonData(path='./data/sec_corpus_2016-2019_clean_proto.jsonl')
+    parser = build_arg_parser()
+    args = parser.parse_args()
+
+    max_seq_length = args.max_seq_len
+
+    don_data = DonData(path=args.data)
 
     model_name = 'distilbert-base-uncased'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -261,6 +272,17 @@ def main():
     )
     model.to(device)
 
+    train_params = {
+        'seed': args.seed or 0xDEADBEEF,
+        'batch_size': args.batch_size or 8,
+        'epochs': args.epochs or 1,
+        'weight_decay': args.weight_decay or 0.0,
+        'learning_rate': args.learning_rate or 5e-5,
+        'adam_epsilon': args.adam_epsilon or 1e-8,
+        'warmup_steps': args.warmup_steps or 0,
+        'max_grad_norm': args.max_grad_norm or 1.0,
+    }
+
     # training
     print('construct training data tensor')
     train_data = convert_examples_to_features(
@@ -269,15 +291,32 @@ def main():
         tokenizer=tokenizer,
     )
     print('start training')
-    train(train_dataset=train_data, model=model)
+    train(
+        train_dataset=train_data,
+        model=model,
+        train_params=train_params,
+        class_weights=don_data.class_weights if args.use_class_weights else None,
+    )
 
     # eval
     print('construct test data tensor')
-    eval_data = convert_examples_to_features(
-        examples=don_data.test(),
-        max_seq_length=max_seq_length,
-        tokenizer=tokenizer,
-    )
+    if args.mode == 'dev':
+        print("using 'dev' for computing test performance")
+        eval_data = convert_examples_to_features(
+            examples=don_data.dev(),
+            max_seq_length=max_seq_length,
+            tokenizer=tokenizer,
+        )
+    elif args.mode == 'test':
+        print("using 'test' for computing test performance")
+        eval_data = convert_examples_to_features(
+            examples=don_data.test(),
+            max_seq_length=max_seq_length,
+            tokenizer=tokenizer,
+        )
+    else:
+        raise ValueError(f"unknown test mode {args.mode}, use 'dev' or 'test'")
+
     print('predict test set')
     prediction_data = evaluate(eval_dataset=eval_data, model=model)
 
@@ -298,7 +337,97 @@ def main():
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
         do_print=True,
     )
-    print(res)
+
+
+def build_arg_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--data",
+        default=None,
+        type=str,
+        required=True,
+        help="Path to .jsonl file containing dataset"
+    )
+    parser.add_argument(
+        "--mode",
+        default="dev",
+        type=str,
+        required=True,
+        help="which testing mode: 'dev' or 'test'"
+    )
+    parser.add_argument(
+        "--use_class_weights",
+        default=True,
+        type=bool,
+        required=False,
+        help="use balanced class weights for training, default True"
+    )
+    parser.add_argument(
+        "--seed",
+        default=0xDEADBEEF,
+        type=int,
+        required=False,
+        help="seed for random number generation, default 0xDEADBEEF",
+    )
+
+    parser.add_argument(
+        "--max_seq_len",
+        default=128,
+        type=int,
+        required=False,
+        help="maximum sequence length in transformer, default 128",
+    )
+    parser.add_argument(
+        "--batch_size",
+        default=8,
+        type=int,
+        required=False,
+        help="training batch size, default 8",
+    )
+    parser.add_argument(
+        "--epochs",
+        default=1,
+        type=int,
+        required=False,
+        help="number of epochs of training, default 1",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        default=0.0,
+        type=float,
+        required=False,
+        help="AdamW weight decay, default 0.0",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        default=5e-5,
+        type=float,
+        required=False,
+        help="AdamW learning rate, default 5e-5",
+    )
+    parser.add_argument(
+        "--adam_epsilon",
+        default=1e-8,
+        type=float,
+        required=False,
+        help="AdamW epsilon, default 1e-8",
+    )
+    parser.add_argument(
+        "--warmup_steps",
+        default=0,
+        type=int,
+        required=False,
+        help="Warmup steps for learning rate schedule, default 0",
+    )
+    parser.add_argument(
+        "--max_grad_norm",
+        default=1.0,
+        type=float,
+        required=False,
+        help="max norm for gradient clipping, default 1.0",
+    )
+    return parser
 
 
 if __name__ == '__main__':

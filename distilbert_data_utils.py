@@ -4,7 +4,7 @@ import itertools
 import torch
 from torch.utils.data import TensorDataset
 
-from utils import split_corpus
+from classification.utils import split_corpus
 
 import numpy as np
 
@@ -34,6 +34,13 @@ class DonData(object):
             for i, label in enumerate(self.all_lbls)
         }
 
+        total = 0
+        self.class_weights = np.zeros(len(self.label_map), dtype=np.float32)
+        for sample in self.train():
+            self.class_weights += sample['label']
+            total += 1
+        self.class_weights = total / (len(self.label_map) * self.class_weights)
+
     def train(self):
         return [{
             'txt': x,
@@ -45,6 +52,12 @@ class DonData(object):
             'txt': x,
             'label': multihot(lbls, self.label_map),
         } for x, lbls in zip(self.don_data.x_test, self.don_data.y_test)]
+
+    def dev(self):
+        return [{
+            'txt': x,
+            'label': multihot(lbls, self.label_map),
+        } for x, lbls in zip(self.don_data.x_dev, self.don_data.y_dev)]
 
 
 class ListData(object):
