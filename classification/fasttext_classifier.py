@@ -13,9 +13,21 @@ def write_fasttext_file(x, y, outfile, lowercasing=False):
             f.write(label_str + ' ' + text + '\n')
 
 
+def predict(model, texts, lowercasing=False):
+    y_pred, y_probs = [], []
+    for text in texts:
+        if lowercasing:
+            text = text.lower()
+        labels, probs = model.predict(text)
+        labels = [l.replace('__label__', '') for l in labels]
+        y_pred.append(labels)
+        y_probs.append(probs)
+    return y_pred, y_probs
+
+
 if __name__ == '__main__':
 
-    do_train = False
+    do_train = True
     lowercasing = True
 
     corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
@@ -40,22 +52,19 @@ if __name__ == '__main__':
 
     if do_train:
         print('Training')
-        model = fasttext.train_supervised(input=train_file, epoch=200, loss='ova')
+        model = fasttext.train_supervised(input=train_file, epoch=200, bucket=200000, loss='ova')
         model.save_model(classifier_file)
     else:
         model = fasttext.load_model(classifier_file)
 
     res = model.test(test_file)
     print(res)
-
-    y_pred = []
-    for text in dataset.x_test:
-        if lowercasing:
-            text = text.lower()
-        labels, probs = model.predict(text)
-        labels = [l.replace('__label__', '') for l in labels]
-        y_pred.append(labels)
+    y_pred, _ = predict(model, dataset.x_test, lowercasing=lowercasing)
     evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
+
+    # TODO clf thresh tuning
+    y_pred_dev, y_prob_dev = predict(model, dataset.x_dev, lowercasing=lowercasing)
+    breakpoint()
 
 
 
