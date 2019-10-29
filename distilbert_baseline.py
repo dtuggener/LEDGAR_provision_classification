@@ -275,31 +275,38 @@ def main():
     )
     model.to(device)
 
-    train_params = {
-        'seed': args.seed or 0xDEADBEEF,
-        'batch_size': args.batch_size or 8,
-        'epochs': args.epochs or 1,
-        'weight_decay': args.weight_decay or 0.0,
-        'learning_rate': args.learning_rate or 5e-5,
-        'adam_epsilon': args.adam_epsilon or 1e-8,
-        'warmup_steps': args.warmup_steps or 0,
-        'max_grad_norm': args.max_grad_norm or 1.0,
-    }
+    if args.mode == 'train':
 
-    # training
-    print('construct training data tensor')
-    train_data = convert_examples_to_features(
-        examples=don_data.train(),
-        max_seq_length=max_seq_length,
-        tokenizer=tokenizer,
-    )
-    print('start training')
-    train(
-        train_dataset=train_data,
-        model=model,
-        train_params=train_params,
-        class_weights=don_data.class_weights if args.use_class_weights else None,
-    )
+        train_params = {
+            'seed': args.seed or 0xDEADBEEF,
+            'batch_size': args.batch_size or 8,
+            'epochs': args.epochs or 1,
+            'weight_decay': args.weight_decay or 0.0,
+            'learning_rate': args.learning_rate or 5e-5,
+            'adam_epsilon': args.adam_epsilon or 1e-8,
+            'warmup_steps': args.warmup_steps or 0,
+            'max_grad_norm': args.max_grad_norm or 1.0,
+        }
+
+        # training
+        print('construct training data tensor')
+        train_data = convert_examples_to_features(
+            examples=don_data.train(),
+            max_seq_length=max_seq_length,
+            tokenizer=tokenizer,
+        )
+        print('start training')
+        train(
+            train_dataset=train_data,
+            model=model,
+            train_params=train_params,
+            class_weights=don_data.class_weights if args.use_class_weights else None,
+        )
+
+        torch.save(model, args.model_path)
+    else:
+        print('loading model', args.model_path)
+        model = torch.load(args.model_path)
 
     print('construct dev tensor')
     dev_data = convert_examples_to_features(
@@ -307,10 +314,10 @@ def main():
         max_seq_length=max_seq_length,
         tokenizer=tokenizer,
     )
+    
     print('predict dev set')
     prediction_data = evaluate(eval_dataset=dev_data, model=model)
-
-    # tune thresholds
+    
     print('tuning clf thresholds on dev')
     threshs = tune_threshs(
         probas=prediction_data['pred'],
@@ -318,19 +325,12 @@ def main():
     )
 
     # eval
-    print('construct test data tensor')
-    if args.mode == 'dev':
-        print("using 'dev' for computing test performance")
-        test_data = dev_data
-    elif args.mode == 'test':
-        print("using 'test' for computing test performance")
-        test_data = convert_examples_to_features(
-            examples=don_data.test(),
-            max_seq_length=max_seq_length,
-            tokenizer=tokenizer,
-        )
-    else:
-        raise ValueError(f"unknown test mode {args.mode}, use 'dev' or 'test'")
+    print("using 'test' for computing test performance")
+    test_data = convert_examples_to_features(
+        examples=don_data.test(),
+        max_seq_length=max_seq_length,
+        tokenizer=tokenizer,
+    )
 
     print('predict test set')
     prediction_data = evaluate(eval_dataset=test_data, model=model)
@@ -362,10 +362,17 @@ def build_arg_parser():
     )
     parser.add_argument(
         "--mode",
-        default="dev",
+        default="test",
         type=str,
         required=True,
-        help="which testing mode: 'dev' or 'test'"
+        help="which mode: 'train' or 'test'"
+    )
+    parser.add_argument(
+        "--model_path",
+        default='./distilbert.pt',
+        type=str,
+        required=False,
+        help="path to model file, default ./distilbert.pt"
     )
     parser.add_argument(
         "--use_class_weights",
