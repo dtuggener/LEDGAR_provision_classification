@@ -329,6 +329,7 @@ def main():
 
     # eval
     print("using 'test' for computing test performance")
+    print('construct test tensor')
     test_data = convert_examples_to_features(
         examples=don_data.test(),
         max_seq_length=max_seq_length,
@@ -349,8 +350,9 @@ def main():
     res = evaluate_multilabels(
         y=multihot_to_label_lists(prediction_data['truth'], don_data.label_map),
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
-        do_print=True,
+        do_print=False,
     )
+    open('eavluation_results.txt', 'w', encoding='utf-8').write(str(res))
 
 
 def build_arg_parser():

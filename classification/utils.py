@@ -105,11 +105,12 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
         all_rec.append(rec)
         all_prec.append(prec)
         if do_print:
-            print('\t'.join([label.rjust(max_len, ' '),
+            print('\t'.join([label.encode('utf-8').rjust(max_len, b' '),
                          ('%.2f' % round(prec, 2)).ljust(4, ' '),
                          ('%.2f' % round(rec, 2)).ljust(4, ' '),
-                         ('%.2f' % round(f1, 2)).ljust(4, ' '),
-                         str(cnts['tp'] + cnts['fn']).rjust(5, ' ')]))
+                         ('%.2f' % round(f1, 2)).ljust(4, ' '), 
+                         str(cnts['tp'] + cnts['fn']).rjust(5, ' ')
+                         ]))
 
     eval_results['Macro']['prec'] = sum(all_prec) / len(all_prec)
     eval_results['Macro']['rec'] = sum(all_rec) / len(all_rec)
