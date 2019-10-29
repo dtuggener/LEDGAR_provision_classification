@@ -36,14 +36,17 @@ if __name__ == '__main__':
 
     train_de = True
     test_de = True
-    test_nda = False
     use_tfidf = True
+    test_nda = False
 
-    model_name = 'MLP_avg_NDA.h5'
+
+    # model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
-    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # model_name = 'MLP_avg_proto.h5'
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    model_name = 'MLP_avg_leaves.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
 
     epochs = 50
     batch_size = 32
@@ -60,8 +63,8 @@ if __name__ == '__main__':
     test_y = mlb.transform(dataset.y_test)
     dev_y = mlb.transform(dataset.y_dev)
 
-    embedding_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_data.npy'
-    vocab_file = '/home/don/resources/fastText_MUSE/wiki.multi.en.vec_vocab.json'
+    embedding_file = 'data/wiki.multi.en.vec_data.npy'
+    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
     embeddings = numpy.load(embedding_file)
     vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
