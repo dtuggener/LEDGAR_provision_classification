@@ -257,8 +257,8 @@ def main():
     parser = build_arg_parser()
     args = parser.parse_args()
 
-    if args.mode not in {'test', 'dev'}:
-        raise ValueError(f"unknown mode {args.mode}, use 'test' or 'dev'")
+    if args.mode not in {'test', 'train'}:
+        raise ValueError(f"unknown mode {args.mode}, use 'test' or 'train'")
 
     max_seq_length = args.max_seq_len
 
@@ -306,7 +306,10 @@ def main():
         torch.save(model, args.model_path)
     else:
         print('loading model', args.model_path)
-        model = torch.load(args.model_path)
+        if torch.cuda.is_available():
+            model = torch.load(args.model_path)
+        else:
+            model = torch.load(args.model_path, map_location='cpu')
 
     print('construct dev tensor')
     dev_data = convert_examples_to_features(
