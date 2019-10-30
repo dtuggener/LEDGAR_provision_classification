@@ -24,9 +24,7 @@ def build_model(x_train, num_classes):
     hidden_size_2 = int(num_classes * 1.5)
     model = Sequential()
 
-    model.add(
-        Dense(hidden_size_2, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42),
-              activation='relu'))
+    model.add(Dense(hidden_size_2, input_shape=(input_shape,), activation='relu'))
     model.add(Dropout(0.5, seed=42))
 
     #model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
@@ -54,8 +52,10 @@ if __name__ == '__main__':
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
     # model_name = 'MLP_avg_leaves.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
-    model_name = 'MLP_avg_freq100.h5'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+    # model_name = 'MLP_avg_freq100.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+    model_name = 'MLP_avg_leaves_subsampled.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
 
     epochs = 50
     batch_size = 32

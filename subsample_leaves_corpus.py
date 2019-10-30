@@ -16,7 +16,8 @@ def shuffle_data(x, y, d):
 
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    # corpus_file = 'sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
 
     x: List[str] = []
     y: List[List[str]] = []
@@ -53,7 +54,6 @@ if __name__ == '__main__':
     sampled_labels = [l for labels in sampled_y for l in labels]
     sampled_label_counts = Counter(sampled_labels)
 
-    write_jsonl(corpus_file.replace('.jsonl', 'subsampled.jsonl'), sampled_x, sampled_y, sampled_docids)
-    breakpoint()
+    write_jsonl(corpus_file.replace('.jsonl', '_subsampled.jsonl'), sampled_x, sampled_y, sampled_docids)
 
 
