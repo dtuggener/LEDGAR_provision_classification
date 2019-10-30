@@ -40,7 +40,7 @@ def build_model(x_train, num_classes):
 
 if __name__ == '__main__':
 
-    train_de = True
+    train_de = False
     test_de = True
     use_tfidf = False
     test_nda = False
@@ -85,21 +85,25 @@ if __name__ == '__main__':
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
     label_counts = Counter(all_labels)
     sum_labels_counts = sum(label_counts.values())
+
+    """
+    # TODO use sklearn's method to calculate class weights
     class_weight = {numpy.where(mlb.classes_ == label)[0][0]:
                         1 - (cnt/sum_labels_counts)
                     for label, cnt in label_counts.items()}
+    """
 
     if train_de:
         model = build_model(train_x, num_classes)
         early_stopping = EarlyStopping(monitor='val_loss',
-                                       mode='auto', verbose=1,
+                                       mode='min', verbose=1,
                                        patience=3, restore_best_weights=True)
         # tensor_board = TensorBoard()
         print('Train model...')
         try:
             model.fit(train_x, train_y, batch_size=batch_size, epochs=epochs,
                       verbose=1, validation_data=(dev_x, dev_y),
-                      class_weight=class_weight,
+                      # class_weight=class_weight,
                       callbacks=[early_stopping]) #, tensor_board])
         except KeyboardInterrupt:
             pass
@@ -110,14 +114,11 @@ if __name__ == '__main__':
         model = keras.models.load_model('saved_models/%s' % model_name)
 
     y_pred_bin_dev = model.predict(dev_x)
-    label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb)
+    label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb, objective='f1')
     y_pred_bin = model.predict(test_x)
     y_pred_thresh = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
-    y_pred_nothresh = stringify_labels(y_pred_bin, mlb)
-    #print('MLP results without classifier threshold tuning')
-    #evaluate_multilabels(dataset.y_test, y_pred_nothresh, do_print=True)
     print('MLP results with classifier threshold tuning')
-    res = evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=False)
+    res = evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
     with open('MLP_evaluation_results_%s.txt' % model_name, 'w', encoding='utf-8') as f:
         f.write(str(res))
 
