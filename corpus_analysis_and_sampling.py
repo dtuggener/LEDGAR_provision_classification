@@ -233,8 +233,9 @@ if __name__ == '__main__':
 
     labels = [l for labels in y for l in labels]
     label_counts = Counter(labels)
-
     create_subcorpora(x, y, doc_ids)
+
+    # avg_tok_num = numpy.mean([len(text.split()) for text in x])
 
     # Find label clusters that often occur together in documents
     # cluster_labels(y, doc_ids)

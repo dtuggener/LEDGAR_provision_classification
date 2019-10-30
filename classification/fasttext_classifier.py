@@ -30,8 +30,10 @@ if __name__ == '__main__':
     do_train = True
     lowercasing = True
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    classifier_file = 'saved_models/fasttext_sec_clf_nda.mdl'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # classifier_file = 'saved_models/fasttext_sec_clf_nda.mdl'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+    classifier_file = 'saved_models/fasttext_sec_clf_freq100.mdl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -52,7 +54,7 @@ if __name__ == '__main__':
 
     if do_train:
         print('Training')
-        model = fasttext.train_supervised(input=train_file, epoch=200, bucket=200000, loss='ova')
+        model = fasttext.train_supervised(input=train_file, epoch=10, bucket=200000, loss='ova')
         model.save_model(classifier_file)
     else:
         model = fasttext.load_model(classifier_file)
@@ -63,8 +65,8 @@ if __name__ == '__main__':
     evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
 
     # TODO clf thresh tuning
-    y_pred_dev, y_prob_dev = predict(model, dataset.x_dev, lowercasing=lowercasing)
-    breakpoint()
+    # y_pred_dev, y_prob_dev = predict(model, dataset.x_dev, lowercasing=lowercasing)
+    # breakpoint()
 
 
 

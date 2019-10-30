@@ -9,6 +9,7 @@ from typing import List
 from collections import Counter
 from sklearn.preprocessing import MultiLabelBinarizer
 
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, Embedding, TimeDistributed, Dense, \
     GlobalAveragePooling1D, Multiply, Lambda
 from tensorflow.keras.models import Model, load_model
@@ -17,6 +18,31 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds
+
+
+class GlobalMeanPooling1D(GlobalAveragePooling1D):
+    def __init__(self, **kwargs):
+        self.supports_masking = True
+        super(GlobalMeanPooling1D, self).__init__(**kwargs)
+
+    def compute_mask(self, input, input_mask=None):
+        # do not pass the mask to the next layers
+        return None
+
+    def call(self, x, mask=None):
+        if mask is not None:
+            # mask (batch, time)
+            mask = K.cast(mask, K.floatx())
+            # mask (batch, x_dim, time)
+            mask = K.repeat(mask, x.shape[-1])
+            # mask (batch, time, x_dim)
+            mask = K.transpose(mask, [0, 2, 1])
+            x = x * mask
+        return K.sum(x, axis=1) / K.sum(mask, axis=1)
+
+    def compute_output_shape(self, input_shape):
+        # remove temporal dimension
+        return input_shape[0], input_shape[2]
 
 
 def my_repeat_vecs(x, rep, axis):
@@ -38,7 +64,7 @@ def build_model(max_sent_length, vocab2int, embeddings, num_labels):
     repeated_self_attn = Lambda(my_repeat_vecs, arguments={'rep': embedding_dim, 'axis': -1})(self_attn)
 
     sent_weighted = Multiply()([repeated_self_attn, embedded])
-    sent_averaged = GlobalAveragePooling1D()(sent_weighted)
+    sent_averaged = GlobalMeanPooling1D()(sent_weighted)
     #hidden_dense = Dense(512, activation='relu')(sent_averaged)
     classifier = Dense(num_labels, activation='sigmoid')(sent_averaged)
     model = Model(inputs=input_layer, outputs=classifier)

@@ -19,13 +19,21 @@ from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
 def build_model(x_train, num_classes):
     print('Building model...')
     input_shape = x_train[0].shape[0]
-    hidden_size_1 = input_shape * 2
-    hidden_size_2 = int(input_shape / 2)
+    hidden_size_1 = int(input_shape * 1.5)
+    # hidden_size_2 = int(input_shape / 2)
+    hidden_size_2 = int(num_classes * 1.5)
     model = Sequential()
-    model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
+
+    model.add(
+        Dense(hidden_size_2, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42),
+              activation='relu'))
     model.add(Dropout(0.5, seed=42))
-    model.add(Dense(hidden_size_2, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
-    model.add(Dropout(0.5, seed=42))
+
+    #model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
+    #model.add(Dropout(0.5, seed=42))
+    # model.add(Dense(hidden_size_2, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
+    # model.add(Dropout(0.5, seed=42))
+
     model.add(Dense(num_classes, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
@@ -36,17 +44,18 @@ if __name__ == '__main__':
 
     train_de = True
     test_de = True
-    use_tfidf = True
+    use_tfidf = False
     test_nda = False
-
 
     # model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
     # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # model_name = 'MLP_avg_proto.h5'
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
-    model_name = 'MLP_avg_leaves.h5'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    # model_name = 'MLP_avg_leaves.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+    model_name = 'MLP_avg_freq100.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
 
     epochs = 50
     batch_size = 32
@@ -83,13 +92,17 @@ if __name__ == '__main__':
     if train_de:
         model = build_model(train_x, num_classes)
         early_stopping = EarlyStopping(monitor='val_loss',
+                                       mode='auto', verbose=1,
                                        patience=3, restore_best_weights=True)
-        tensor_board = TensorBoard()
+        # tensor_board = TensorBoard()
         print('Train model...')
-        model.fit(train_x, train_y, batch_size=batch_size, epochs=epochs,
-                  verbose=1, validation_data=(dev_x, dev_y),
-                  class_weight=class_weight,
-                  callbacks=[early_stopping, tensor_board])
+        try:
+            model.fit(train_x, train_y, batch_size=batch_size, epochs=epochs,
+                      verbose=1, validation_data=(dev_x, dev_y),
+                      class_weight=class_weight,
+                      callbacks=[early_stopping]) #, tensor_board])
+        except KeyboardInterrupt:
+            pass
         model.save('saved_models/%s' % model_name, overwrite=True)
 
     else:
@@ -101,10 +114,12 @@ if __name__ == '__main__':
     y_pred_bin = model.predict(test_x)
     y_pred_thresh = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
     y_pred_nothresh = stringify_labels(y_pred_bin, mlb)
-    print('MLP results without classifier threshold tuning')
-    evaluate_multilabels(dataset.y_test, y_pred_nothresh, do_print=True)
+    #print('MLP results without classifier threshold tuning')
+    #evaluate_multilabels(dataset.y_test, y_pred_nothresh, do_print=True)
     print('MLP results with classifier threshold tuning')
-    evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
+    res = evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=False)
+    with open('MLP_evaluation_results_%s.txt' % model_name, 'w', encoding='utf-8') as f:
+        f.write(str(res))
 
     if test_nda:
         nda_file = '../nda_proprietary_data2_sampled.jsonl'
