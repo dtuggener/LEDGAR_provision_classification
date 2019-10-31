@@ -32,8 +32,12 @@ if __name__ == '__main__':
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # classifier_file = 'saved_models/fasttext_sec_clf_nda.mdl'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
-    classifier_file = 'saved_models/fasttext_sec_clf_freq100.mdl'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+    # classifier_file = 'saved_models/fasttext_sec_clf_freq100.mdl'
+
+    corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+    classifier_file = 'saved_models/fasttext_sec_clf_leaves_subsampled.mdl'
+
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)

@@ -19,19 +19,20 @@ from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
 def build_model(x_train, num_classes):
     print('Building model...')
     input_shape = x_train[0].shape[0]
-    hidden_size_1 = int(input_shape * 1.5)
+    # hidden_size_1 = int(input_shape * 1.5)
     # hidden_size_2 = int(input_shape / 2)
-    hidden_size_2 = int(num_classes * 1.5)
+    # hidden_size_2 = int(num_classes * 1.5)
+    hidden_size_2 = input_shape * 2
     model = Sequential()
 
     model.add(Dense(hidden_size_2, input_shape=(input_shape,), activation='relu'))
     model.add(Dropout(0.5, seed=42))
-
-    #model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
-    #model.add(Dropout(0.5, seed=42))
-    # model.add(Dense(hidden_size_2, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
-    # model.add(Dropout(0.5, seed=42))
-
+    """
+    model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
+    model.add(Dropout(0.5, seed=42))
+    model.add(Dense(hidden_size_2, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
+    model.add(Dropout(0.5, seed=42))
+    """
     model.add(Dense(num_classes, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
@@ -40,7 +41,7 @@ def build_model(x_train, num_classes):
 
 if __name__ == '__main__':
 
-    train_de = False
+    train_de = True
     test_de = True
     use_tfidf = False
     test_nda = False
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
 
     epochs = 50
-    batch_size = 32
+    batch_size = 8
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
