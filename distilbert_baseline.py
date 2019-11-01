@@ -255,7 +255,7 @@ def multihot_to_label_lists(label_array, label_map):
 def subsample(data, quantile, n_classes):
     class_counts = np.zeros(n_classes, dtype=np.int32)
     for sample in data:
-        class_counts += sample['label']
+        class_counts += (sample['label'] > 0)
 
     cutoff = int(np.quantile(class_counts, q=quantile))
 
@@ -269,7 +269,7 @@ def subsample(data, quantile, n_classes):
     for ix, sample in enumerate(data):
         if np.sum(sample['label']) > 1:
             to_keep.add(ix)
-            n_to_sample -= sample['label']
+            n_to_sample -= (sample['label'] > 0)
         else:
             label = np.argmax(sample['label'])
             index_map[label].append(ix)
@@ -328,15 +328,16 @@ def main():
         }
 
         # training
-        print('construct training data tensor')
         train_data = don_data.train()
         if args.subsample_quantile is not None:
+            print('subsampling training data')
             train_data = subsample(
                 data=train_data,
                 quantile=args.subsample_quantile,
                 n_classes=len(don_data.all_lbls),
             )
 
+        print('construct training data tensor')
         train_data = convert_examples_to_features(
             examples=train_data,
             max_seq_length=max_seq_length,
