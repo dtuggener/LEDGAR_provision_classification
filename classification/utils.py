@@ -114,7 +114,10 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
 
     eval_results['Macro']['prec'] = sum(all_prec) / len(all_prec)
     eval_results['Macro']['rec'] = sum(all_rec) / len(all_rec)
-    eval_results['Macro']['f1'] = (2 * eval_results['Macro']['prec'] * eval_results['Macro']['rec']) / \
+    if eval_results['Macro']['prec'] + eval_results['Macro']['rec'] == 0:
+        eval_results['Macro']['f1'] = 0.0
+    else:
+        eval_results['Macro']['f1'] = (2 * eval_results['Macro']['prec'] * eval_results['Macro']['rec']) / \
                                   (eval_results['Macro']['prec'] + eval_results['Macro']['rec'])
     eval_results['Macro']['support'] = len(y)
 
@@ -131,7 +134,10 @@ def evaluate_multilabels(y: List[List[str]], y_preds: List[List[str]],
         eval_results['Micro']['rec'] = all_tp / (all_tp + all_fn)
         micro_prec = eval_results['Micro']['prec']
         micro_rec = eval_results['Micro']['rec']
-        eval_results['Micro']['f1'] = (2 * micro_rec * micro_prec) / (micro_rec + micro_prec)
+        if micro_prec + micro_rec == 0:
+            eval_results['Micro']['f1'] = 0.0
+        else:
+            eval_results['Micro']['f1'] = (2 * micro_rec * micro_prec) / (micro_rec + micro_prec)
     eval_results['Micro']['support'] = len(y)
 
     if do_print:
