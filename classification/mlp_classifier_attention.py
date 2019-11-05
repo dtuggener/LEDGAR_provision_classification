@@ -42,7 +42,7 @@ def build_model(max_sent_length, vocab2int, embeddings, num_labels):
 
 if __name__ == '__main__':
 
-    do_train = True
+    do_train = False
     do_test = True
     classification_thresh = 0.5
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
                         label_counts.items()}
 
-        early_stopping = EarlyStopping(monitor='val_accuracy', patience=3,
+        early_stopping = EarlyStopping(monitor='val_loss', patience=3,
                                        restore_best_weights=True)
         tensor_board = TensorBoard()
         model.fit(train_x, train_y, batch_size=32, epochs=50,
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
         model.save('saved_models/%s' % model_name, overwrite=True)
     else:
-        model = load_model('saved_models/%s' % model_name)
+        model = load_model('saved_models/%s' % model_name, custom_objects={'AttentionLayer': AttentionLayer})
 
     # plot_model(model, to_file='/tmp/%s.png' % model_name)
 
@@ -130,3 +130,4 @@ if __name__ == '__main__':
         # TODO add classifier tuning
         y_pred = stringify_labels(y_pred_bin, mlb, thresh=classification_thresh)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
+        breakpoint()
