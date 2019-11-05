@@ -60,10 +60,10 @@ if __name__ == '__main__':
     predict_with_labelnames = False
     do_train = True
     do_test = True
-    test_prop_nda = False
+    test_prop_nda = True
 
-    corpus_file = '../sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_freq100_sampled.pkl'
+    # corpus_file = '../sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
+    # classifier_file = 'saved_models/logreg_sec_clf_freq100_sampled.pkl'
 
     # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_leaves_sampled.pkl'
@@ -71,8 +71,8 @@ if __name__ == '__main__':
     # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
