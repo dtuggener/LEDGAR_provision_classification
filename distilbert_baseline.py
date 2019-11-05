@@ -252,6 +252,38 @@ def multihot_to_label_lists(label_array, label_map):
     return res
 
 
+def subsample(data, quantile, n_classes):
+    class_counts = np.zeros(n_classes, dtype=np.int32)
+    for sample in data:
+        class_counts += (sample['label'] > 0)
+
+    cutoff = int(np.quantile(class_counts, q=quantile))
+
+    n_to_sample = np.minimum(class_counts, cutoff)
+
+    index_map = {
+        i: []
+        for i in range(n_classes)
+    }
+    to_keep = set()
+    for ix, sample in enumerate(data):
+        if np.sum(sample['label']) > 1:
+            to_keep.add(ix)
+            n_to_sample -= (sample['label'] > 0)
+        else:
+            label = np.argmax(sample['label'])
+            index_map[label].append(ix)
+
+    for c in range(n_classes):
+        to_keep.update(index_map[c][:max(0, n_to_sample[c])])
+
+    return [
+        d
+        for ix, d in enumerate(data)
+        if ix in to_keep
+    ]
+
+
 def main():
 
     parser = build_arg_parser()
@@ -259,6 +291,13 @@ def main():
 
     if args.mode not in {'test', 'train'}:
         raise ValueError(f"unknown mode {args.mode}, use 'test' or 'train'")
+
+    if args.subsample_quantile is not None:
+        if not (1.0 > args.subsample_quantile > 0.0):
+            raise ValueError(
+                f"subsampling quantile needs to be None or in (0.0, 1.0),"
+                f" given: {args.subsample_quantile}"
+            )
 
     max_seq_length = args.max_seq_len
 
@@ -289,9 +328,18 @@ def main():
         }
 
         # training
+        train_data = don_data.train()
+        if args.subsample_quantile is not None:
+            print('subsampling training data')
+            train_data = subsample(
+                data=train_data,
+                quantile=args.subsample_quantile,
+                n_classes=len(don_data.all_lbls),
+            )
+
         print('construct training data tensor')
         train_data = convert_examples_to_features(
-            examples=don_data.train(),
+            examples=train_data,
             max_seq_length=max_seq_length,
             tokenizer=tokenizer,
         )
@@ -378,6 +426,15 @@ def build_arg_parser():
         type=str,
         required=False,
         help="path to model file, default ./distilbert.pt"
+    )
+    parser.add_argument(
+        "--subsample_quantile",
+        default=None,
+        type=float,
+        required=False,
+        help="subsample training data such that every class has at most"
+             " as many samples as the quantile provided,"
+             " no subsampling if set to None, default None"
     )
     parser.add_argument(
         "--use_class_weights",
