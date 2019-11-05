@@ -34,7 +34,8 @@ def build_model(max_sent_length, vocab2int, embeddings, num_labels):
     embedded = embedding_layer(input_layer)
     # lstm = LSTM(64, return_sequences=True)(embedded)
     l_att = AttentionLayer()(embedded)
-    classifier = Dense(num_labels, activation='sigmoid')(l_att)
+    dense_1 = Dense(embedding_dim*2, activation='relu')(l_att)
+    classifier = Dense(num_labels, activation='sigmoid')(dense_1)
     model = Model(inputs=input_layer, outputs=classifier)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
@@ -109,14 +110,17 @@ if __name__ == '__main__':
 
         early_stopping = EarlyStopping(monitor='val_loss', patience=3,
                                        restore_best_weights=True)
-        tensor_board = TensorBoard()
-        model.fit(train_x, train_y, batch_size=32, epochs=50,
-                  verbose=1,
-                  validation_data=(dev_x, dev_y),
-                  # validation_split=0.1,
-                  # class_weight=class_weight,
-                  #callbacks=[early_stopping, tensor_board])
-                  callbacks=[early_stopping])
+        # tensor_board = TensorBoard()
+        try:
+            model.fit(train_x, train_y, batch_size=32, epochs=50,
+                      verbose=1,
+                      validation_data=(dev_x, dev_y),
+                      # validation_split=0.1,
+                      # class_weight=class_weight,
+                      #callbacks=[early_stopping, tensor_board])
+                      callbacks=[early_stopping])
+        except KeyboardInterrupt:
+            pass
 
         model.save('saved_models/%s' % model_name, overwrite=True)
     else:

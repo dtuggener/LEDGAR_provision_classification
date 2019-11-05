@@ -160,7 +160,6 @@ def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> Tuple[nx.DiGraph, L
 if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
     graph_file = corpus_file.replace('.jsonl', '_real_label_hierarchy.gexf')
-    # graph_file = corpus_file.replace('.jsonl', '_label_hierarchy.gexf')
     print('Reading graph from', graph_file)
     graph = nx.read_gexf(graph_file)
 
@@ -191,7 +190,6 @@ if __name__ == '__main__':
         doc_ids.append(labeled_provision['source'])
 
     label_set = set(l for labels in y for l in labels)
-    breakpoint()
     base_forms = get_base_forms(label_set)
 
     new_y, new_x, new_doc_ids = [], [], []

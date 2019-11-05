@@ -58,7 +58,7 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
 if __name__ == '__main__':
 
     predict_with_labelnames = False
-    do_train = True
+    do_train = False
     do_test = True
     test_prop_nda = True
 
