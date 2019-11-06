@@ -5,6 +5,7 @@ Sentence classification with self-attention in keras
 import json
 import numpy; numpy.random.seed(42)
 import re
+import math
 from collections import Counter
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import f1_score
@@ -65,11 +66,11 @@ if __name__ == '__main__':
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
     # model_name = 'MLP_attn_leaves_subsampled.h5'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    model_name = 'MLP_attn_nda_ft.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # model_name = 'MLP_attn_nda_ft.h5'
 
-    # corpus_file = 'data/nda_proprietary_data2_sampled.jsonl'
-    # model_name = 'MLP_attn_nda_prop_ft.h5'
+    corpus_file = 'data/nda_proprietary_data2_sampled.jsonl'
+    model_name = 'MLP_attn_nda_prop_ft.h5'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -87,9 +88,13 @@ if __name__ == '__main__':
     embedding_file = 'data/cc.en.300.bin'
     embeddings = fasttext.load_model(embedding_file)
 
-    print('Vectorizing training set')
-    train_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
-                   for x_ in dataset.x_train]
+    max_sent_length = max(
+        [
+            len([w for w in re.findall('\w+', x_.lower())])
+            for x_ in dataset.x_train
+         ]
+    )
+
     print('Vectorizing test set')
     test_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
                   for x_ in dataset.x_test]
@@ -97,8 +102,6 @@ if __name__ == '__main__':
     dev_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
                  for x_ in dataset.x_dev]
 
-    max_sent_length = max([len(x_) for x_ in train_x_int])
-    train_x = pad_sequences(train_x_int, max_sent_length)
     test_x = pad_sequences(test_x_int, max_sent_length)
     dev_x = pad_sequences(dev_x_int, max_sent_length)
 
@@ -122,13 +125,24 @@ if __name__ == '__main__':
                                        restore_best_weights=True)
 
         try:
-            model.fit(train_x, train_y,
-                      batch_size=32,
-                      epochs=50,
-                      verbose=1,
-                      validation_data=(dev_x, dev_y),
-                      # class_weight=class_weight,
-                      callbacks=[early_stopping])
+
+            def train_data_generator():  # TODO add batchsize
+                while True:
+                    for x_, y_ in zip(dataset.x_train, train_y):
+                        x_int = [embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
+                        x_pad = pad_sequences([x_int], max_sent_length)
+                        yield ({'input': x_pad}, {'output': y_})
+
+            batch_size = 32
+            step_size = math.ceil(len(dataset.y_train) / batch_size)
+
+            model.fit_generator(train_data_generator(),
+                                steps_per_epoch= step_size,
+                                epochs=50,
+                                verbose=1,
+                                # validation_data=(dev_x, dev_y),
+                                # class_weight=class_weight,
+                                callbacks=[early_stopping])
         except KeyboardInterrupt:
             pass
 

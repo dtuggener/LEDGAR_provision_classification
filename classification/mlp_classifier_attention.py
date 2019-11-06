@@ -80,9 +80,9 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = False
+    do_train = True
     do_test = True
-    do_test_nda = True
+    do_test_nda = False
     classification_thresh = 0.5
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
@@ -91,18 +91,17 @@ if __name__ == '__main__':
     # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
     # model_name = 'MLP_attn_proto.h5'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
-    # model_name = 'MLP_attn_leaves_subsampled.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+    model_name = 'MLP_attn_leaves_subsampled.h5'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    # model_name = 'MLP_attn_proto.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # model_name = 'MLP_attn_nda.h5'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    model_name = 'MLP_attn_nda.h5'
-
-    # TODO use vanilla fasttext embeddings and OOV word prediction
+    # embedding_file = 'data/wiki.multi.en.vec_data.npy'
+    # vocab_file = 'data/wiki.multi.en.vec_vocab.json'
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+
     embeddings = numpy.load(embedding_file)
     vocab = json.load(open(vocab_file))
     int2vocab = {i: w for w, i in vocab.items()}
@@ -133,21 +132,6 @@ if __name__ == '__main__':
     train_x = pad_sequences(train_x_int, max_sent_length)
     test_x = pad_sequences(test_x_int, max_sent_length)
     dev_x = pad_sequences(dev_x_int, max_sent_length)
-
-    # Remove zero-valued training examples and labels; they break fit()!
-    zero_ixs = [i for i, x_ in enumerate(train_x_int) if not x_]
-    train_x = numpy.delete(train_x, zero_ixs, axis=0)
-    train_x_int = numpy.delete(train_x_int, zero_ixs, axis=0)
-    train_x_str = numpy.delete(dataset.x_test, zero_ixs, axis=0)
-    train_y = numpy.delete(train_y, zero_ixs, axis=0)
-    train_y_str = numpy.delete(dataset.y_train, zero_ixs, axis=0)
-
-    zero_ixs = [i for i, x_ in enumerate(dev_x_int) if not x_]
-    dev_x = numpy.delete(dev_x, zero_ixs, axis=0)
-    dev_x_int = numpy.delete(dev_x_int, zero_ixs, axis=0)
-    dev_x_str = numpy.delete(dataset.x_dev, zero_ixs, axis=0)
-    dev_y = numpy.delete(dev_y, zero_ixs, axis=0)
-    dev_y_str = numpy.delete(dataset.y_dev, zero_ixs, axis=0)
 
     if do_train:
         model = build_model(max_sent_length, vocab, embeddings, num_classes)
@@ -189,9 +173,7 @@ if __name__ == '__main__':
     if do_test:
         print('predicting')
         y_pred_bin_dev = model.predict(dev_x, verbose=1)
-        # threshs = tune_threshs(y_pred_bin_dev, dev_y)
-        # label_threshs = {label: thresh for label, thresh in zip(mlb.classes_, threshs)}
-        label_threshs = tune_clf_thresholds(y_pred_bin_dev, dev_y_str, mlb)
+        label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb)
         y_pred_bin = model.predict(test_x, verbose=1)
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
@@ -216,25 +198,9 @@ if __name__ == '__main__':
         test_x = pad_sequences(test_x_int, max_sent_length)
         dev_x = pad_sequences(dev_x_int, max_sent_length)
 
-        # Remove zero-valued training examples and labels; they break fit()!
-        zero_ixs = [i for i, x_ in enumerate(train_x_int) if not x_]
-        train_x = numpy.delete(train_x, zero_ixs, axis=0)
-        train_x_int = numpy.delete(train_x_int, zero_ixs, axis=0)
-        train_x_str = numpy.delete(dataset.x_test, zero_ixs, axis=0)
-        train_y = numpy.delete(train_y, zero_ixs, axis=0)
-        train_y_str = numpy.delete(dataset.y_train, zero_ixs, axis=0)
-
-        zero_ixs = [i for i, x_ in enumerate(dev_x_int) if not x_]
-        dev_x = numpy.delete(dev_x, zero_ixs, axis=0)
-        dev_x_int = numpy.delete(dev_x_int, zero_ixs, axis=0)
-        dev_x_str = numpy.delete(dataset.x_dev, zero_ixs, axis=0)
-        dev_y = numpy.delete(dev_y, zero_ixs, axis=0)
-        dev_y_str = numpy.delete(dataset.y_dev, zero_ixs, axis=0)
-
         print('predicting NDA')
         y_pred_bin_dev = model.predict(dev_x, verbose=1)
-        threshs = tune_threshs(y_pred_bin_dev, dev_y)
-        label_threshs = {label: thresh for label, thresh in zip(mlb.classes_, threshs)}
+        label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb)
         y_pred_bin = model.predict(test_x, verbose=1)
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
