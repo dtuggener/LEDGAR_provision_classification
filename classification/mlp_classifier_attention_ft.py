@@ -41,7 +41,7 @@ def build_model(max_sent_length, embedding_dim, num_labels):
     return model
 
 
-def train_data_generator(x, y, max_sent_length, embeddings, batch_size=32):
+def data_generator(x, y, max_sent_length, embeddings, batch_size=32):
     x_out, y_out = [], []
     while True:
         for i, (x_, y_) in enumerate(zip(x, y), start=1):
@@ -60,6 +60,7 @@ if __name__ == '__main__':
     do_test = True
     do_test_nda = False
     classification_thresh = 0.5
+    batch_size = 32
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
     # model_name = 'MLP_attn_freq100_subsampled_ft.h5'
@@ -99,21 +100,8 @@ if __name__ == '__main__':
          ]
     )
 
-    #for i, tmp in enumerate(train_data_generator(dataset.x_train, train_y, max_sent_length, embeddings)):
-        #breakpoint()
-
-    print('Vectorizing test set')
-    test_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
-                  for x_ in dataset.x_test]
-    print('Vectorizing dev set')
-    dev_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
-                 for x_ in dataset.x_dev]
-
-    test_x = pad_sequences(test_x_int, max_sent_length)
-    dev_x = pad_sequences(dev_x_int, max_sent_length)
-
     if do_train:
-        embedding_dim = 300
+        embedding_dim = 300  # SIze of word embeddings
         model = build_model(max_sent_length, embedding_dim, num_classes)
         print(model.summary())
 
@@ -122,15 +110,16 @@ if __name__ == '__main__':
                                        restore_best_weights=True)
 
         try:
-            batch_size = 32
             # step_size = math.ceil(len(dataset.y_train) / batch_size)
             step_size = len(dataset.x_train)  # No. of samples per epoch
-            model.fit_generator(train_data_generator(dataset.x_train, train_y, max_sent_length, embeddings,
-                                                     batch_size=batch_size),
+            model.fit_generator(data_generator(dataset.x_train, train_y, max_sent_length, embeddings,
+                                               batch_size=batch_size),
                                 steps_per_epoch= step_size,
                                 epochs=50,
                                 verbose=1,
-                                validation_data=(dev_x, dev_y),
+                                validation_data=data_generator(dataset.x_dev, dev_y, max_sent_length, embeddings,
+                                                               batch_size=batch_size),
+                                validation_steps=len(dataset.x_dev),
                                 # class_weight=class_weight,
                                 callbacks=[early_stopping])
         except KeyboardInterrupt:
@@ -146,9 +135,13 @@ if __name__ == '__main__':
 
     if do_test:
         print('predicting')
-        y_pred_bin_dev = model.predict(dev_x, verbose=1)
+        y_pred_bin_dev = model.predict_generator(data_generator(dataset.x_dev, dev_y, max_sent_length, embeddings,
+                                                     batch_size=batch_size), verbose=1)
         label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb)
-        y_pred_bin = model.predict(test_x, verbose=1)
+
+        y_pred_bin = model.predict(data_generator(dataset.x_test, test_y, max_sent_length, embeddings,
+                                                     batch_size=batch_size), verbose=1)
+        
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
 
@@ -160,32 +153,6 @@ if __name__ == '__main__':
         train_y = mlb.transform(dataset.y_train)
         test_y = mlb.transform(dataset.y_test)
         dev_y = mlb.transform(dataset.y_dev)
-
-        train_x_int = [[vocab[w] for w in re.findall('\w+', x_.lower()) if w in vocab]
-                       for x_ in dataset.x_train]
-        test_x_int = [[vocab[w] for w in re.findall('\w+', x_.lower()) if w in vocab]
-                      for x_ in dataset.x_test]
-        dev_x_int = [[vocab[w] for w in re.findall('\w+', x_.lower()) if w in vocab]
-                     for x_ in dataset.x_dev]
-
-        train_x = pad_sequences(train_x_int, max_sent_length)
-        test_x = pad_sequences(test_x_int, max_sent_length)
-        dev_x = pad_sequences(dev_x_int, max_sent_length)
-
-        # Remove zero-valued training examples and labels; they break fit()!
-        zero_ixs = [i for i, x_ in enumerate(train_x_int) if not x_]
-        train_x = numpy.delete(train_x, zero_ixs, axis=0)
-        train_x_int = numpy.delete(train_x_int, zero_ixs, axis=0)
-        train_x_str = numpy.delete(dataset.x_test, zero_ixs, axis=0)
-        train_y = numpy.delete(train_y, zero_ixs, axis=0)
-        train_y_str = numpy.delete(dataset.y_train, zero_ixs, axis=0)
-
-        zero_ixs = [i for i, x_ in enumerate(dev_x_int) if not x_]
-        dev_x = numpy.delete(dev_x, zero_ixs, axis=0)
-        dev_x_int = numpy.delete(dev_x_int, zero_ixs, axis=0)
-        dev_x_str = numpy.delete(dataset.x_dev, zero_ixs, axis=0)
-        dev_y = numpy.delete(dev_y, zero_ixs, axis=0)
-        dev_y_str = numpy.delete(dataset.y_dev, zero_ixs, axis=0)
 
         print('predicting NDA')
         y_pred_bin_dev = model.predict(dev_x, verbose=1)
