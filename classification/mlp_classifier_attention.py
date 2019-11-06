@@ -80,9 +80,9 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = True
+    do_train = False
     do_test = True
-    do_test_nda = False
+    do_test_nda = True
     classification_thresh = 0.5
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
@@ -192,15 +192,9 @@ if __name__ == '__main__':
         # threshs = tune_threshs(y_pred_bin_dev, dev_y)
         # label_threshs = {label: thresh for label, thresh in zip(mlb.classes_, threshs)}
         label_threshs = tune_clf_thresholds(y_pred_bin_dev, dev_y_str, mlb)
-        breakpoint()
         y_pred_bin = model.predict(test_x, verbose=1)
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
-        """        
-        y_pred_bin = model.predict(test_x, verbose=1)
-        y_pred = stringify_labels(y_pred_bin, mlb, thresh=classification_thresh)
-        evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
-        """
 
     if do_test_nda:
         nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
