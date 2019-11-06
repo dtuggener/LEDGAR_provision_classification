@@ -236,7 +236,13 @@ def embed(x_s: List[str], embeddings: numpy.array, vocab: Dict, tfidfizer: Tfidf
 
 
 def tune_clf_thresholds(y_pred_vecs: numpy.array, test_y: List[List[str]],
-                        mlb: MultiLabelBinarizer, objective: str = 'f1') -> Dict[str, float]:
+                        mlb: MultiLabelBinarizer,
+                        objective: str = 'f1',
+                        min_freq: int = 5) -> Dict[str, float]:
+
+    assert objective in {'f1', 'balanced', 'std'}, \
+        f'{objective} not a valid tuning objective for classifier threshold'
+
     thresh_range = [t / 100.0 for t in range(1, 100)]
     all_results = dict()
     for thresh in thresh_range:
@@ -244,26 +250,50 @@ def tune_clf_thresholds(y_pred_vecs: numpy.array, test_y: List[List[str]],
         eval_results = evaluate_multilabels(test_y, y_pred, do_print=False)
         all_results[thresh] = eval_results
 
-    label_threshs: Dict[str, float] = dict()
+    # Don't tune threshholds for labels with less than min_freq support in dev
+    eval_results = all_results[thresh_range[0]]
+    low_freq_labels = {l for l, res_dict in eval_results.items() if
+                       res_dict['support'] < min_freq}
 
+    label_threshs: Dict[str, float] = dict()
     if objective == 'f1':
         for label in mlb.classes_:
-            best_thresh, best_f1 = min(thresh_range), 0.0
-            for t in thresh_range:
-                if all_results[t][label]['f1'] >= best_f1:  # Changing this to '>' favors recall more.
-                    # This search for the threshold should maybe incorporate
-                    # the recall/precision imbalance for thresholds with equal F1
-                    best_thresh, best_f1 = t, all_results[t][label]['f1']
-            label_threshs[label] = best_thresh
+            if label in low_freq_labels:
+                label_threshs[label] = 0.5
+            else:
+                best_thresh, best_f1 = min(thresh_range), 0.0
+                for t in thresh_range:
+                    if all_results[t][label]['f1'] >= best_f1:  # Changing this to '>' favors recall more.
+                        best_thresh, best_f1 = t, all_results[t][label]['f1']
+                label_threshs[label] = best_thresh
 
     elif objective == 'balanced':
         for label in mlb.classes_:
-            best_thresh, best_balance = min(thresh_range), 1.0
-            for t in thresh_range:
-                balance = abs(all_results[t][label]['rec'] - all_results[t][label]['prec'])
-                if balance < best_balance:
-                    best_thresh, best_balance = t, balance
-            label_threshs[label] = best_thresh
+            if label in low_freq_labels:
+                label_threshs[label] = 0.5
+            else:
+                best_thresh, best_balance = min(thresh_range), 0.0
+                for t in thresh_range:
+                    balance = all_results[t][label]['rec'] \
+                              + all_results[t][label]['prec'] \
+                              + all_results[t][label]['f1']
+                    if balance >= best_balance:
+                        best_thresh, best_balance = t, balance
+                label_threshs[label] = best_thresh
+
+    elif objective == 'std':
+        for label in mlb.classes_:
+            if label in low_freq_labels:
+                label_threshs[label] = 0.5
+            else:
+                best_thresh, best_balance = min(thresh_range), 1.0
+                for t in thresh_range:
+                    balance = numpy.std([all_results[t][label]['rec'],
+                                         all_results[t][label]['prec'],
+                                         all_results[t][label]['f1']])
+                    if balance <= best_balance:
+                        best_thresh, best_balance = t, balance
+                label_threshs[label] = best_thresh
 
     return label_threshs
 
