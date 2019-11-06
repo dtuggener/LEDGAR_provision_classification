@@ -41,13 +41,17 @@ def build_model(max_sent_length, embedding_dim, num_labels):
     return model
 
 
-def count_oovs(x):
-    oovs = Counter()
-    for x_ in x:
-        oov = [w for w in re.findall('\w+', x_) if w.lower() not in vocab]
-        for w in oov:
-            oovs[w] += 1
-    return oovs
+def train_data_generator(x, y, max_sent_length, embeddings, batch_size=32):
+    x_out, y_out = [], []
+    while True:
+        for i, (x_, y_) in enumerate(zip(x, y), start=1):
+            x_int = [embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
+            x_out.append(x_int)
+            y_out.append(y_)
+            if i > 1 and i % batch_size == 0:
+                x_out = pad_sequences(x_out, max_sent_length)
+                yield ({'input_1': x_out}, {'dense_2': numpy.array(y_out)})
+                x_out, y_out = [], []
 
 
 if __name__ == '__main__':
@@ -58,19 +62,19 @@ if __name__ == '__main__':
     classification_thresh = 0.5
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
-    # model_name = 'MLP_attn_freq100_subsampled.h5'
+    # model_name = 'MLP_attn_freq100_subsampled_ft.h5'
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    # model_name = 'MLP_attn_proto.h5'
+    # model_name = 'MLP_attn_proto_ft.h5'
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
-    # model_name = 'MLP_attn_leaves_subsampled.h5'
+    # model_name = 'MLP_attn_leaves_subsampled_ft.h5'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # model_name = 'MLP_attn_nda_ft.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    model_name = 'MLP_attn_nda_ft.h5'
 
-    corpus_file = 'data/nda_proprietary_data2_sampled.jsonl'
-    model_name = 'MLP_attn_nda_prop_ft.h5'
+    # corpus_file = 'data/nda_proprietary_data2_sampled.jsonl'
+    # model_name = 'MLP_attn_nda_prop_ft.h5'
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -95,6 +99,9 @@ if __name__ == '__main__':
          ]
     )
 
+    #for i, tmp in enumerate(train_data_generator(dataset.x_train, train_y, max_sent_length, embeddings)):
+        #breakpoint()
+
     print('Vectorizing test set')
     test_x_int = [[embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
                   for x_ in dataset.x_test]
@@ -110,37 +117,20 @@ if __name__ == '__main__':
         model = build_model(max_sent_length, embedding_dim, num_classes)
         print(model.summary())
 
-        # TODO calculate weights in sklearn fashion
-        """
-        # Calculate class weights
-        all_labels: List[str] = [l for labels in train_y_str for l in labels]
-        label_counts = Counter(all_labels)
-        sum_labels_counts = sum(label_counts.values())
-        class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
-                        label_counts.items()}
-        """
-
         early_stopping = EarlyStopping(monitor='val_loss',
                                        patience=3,
                                        restore_best_weights=True)
 
         try:
-
-            def train_data_generator():  # TODO add batchsize
-                while True:
-                    for x_, y_ in zip(dataset.x_train, train_y):
-                        x_int = [embeddings.get_word_vector(w) for w in re.findall('\w+', x_.lower())]
-                        x_pad = pad_sequences([x_int], max_sent_length)
-                        yield ({'input': x_pad}, {'output': y_})
-
             batch_size = 32
-            step_size = math.ceil(len(dataset.y_train) / batch_size)
-
-            model.fit_generator(train_data_generator(),
+            # step_size = math.ceil(len(dataset.y_train) / batch_size)
+            step_size = len(dataset.x_train)  # No. of samples per epoch
+            model.fit_generator(train_data_generator(dataset.x_train, train_y, max_sent_length, embeddings,
+                                                     batch_size=batch_size),
                                 steps_per_epoch= step_size,
                                 epochs=50,
                                 verbose=1,
-                                # validation_data=(dev_x, dev_y),
+                                validation_data=(dev_x, dev_y),
                                 # class_weight=class_weight,
                                 callbacks=[early_stopping])
         except KeyboardInterrupt:
