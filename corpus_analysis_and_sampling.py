@@ -135,22 +135,16 @@ def write_jsonl(out_file: str, x_small, y_small, doc_ids_small):
 
 def create_subcorpora(x, y, doc_ids):
     print('Sampling most common provisions')
-    avg_prov_cnt = avg_provision_count(y, doc_ids) # Average no. of provisions per contract
+    avg_prov_cnt = avg_provision_count(y, doc_ids)  # Average no. of provisions per contract
     x_small, y_small, doc_ids_small = sample_common_labels(x, y, doc_ids, n_labels=avg_prov_cnt)
     label_stats(x_small, y_small, doc_ids_small)
-    out_file  = corpus_file.replace('.jsonl', '_proto.jsonl')
+    out_file = corpus_file.replace('.jsonl', '_proto.jsonl')
     write_jsonl(out_file, x_small, y_small, doc_ids_small)
 
     print('Sampling provisions with frequency >= 100')
     x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=100)
     label_stats(x_small, y_small, doc_ids_small)
     out_file = corpus_file.replace('.jsonl', '_freq100.jsonl')
-    write_jsonl(out_file, x_small, y_small, doc_ids_small)
-
-    print('Sampling sparse labels with 10 <= frequency <= 20')
-    x_small, y_small, doc_ids_small = sample_frequent_labels(x, y, doc_ids, min_freq=10, max_freq=20)
-    label_stats(x_small, y_small, doc_ids_small)
-    out_file = corpus_file.replace('.jsonl', '_sparse.jsonl')
     write_jsonl(out_file, x_small, y_small, doc_ids_small)
 
 

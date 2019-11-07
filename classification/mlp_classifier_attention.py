@@ -80,7 +80,7 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = False
+    do_train = True
     do_test = True
     do_test_nda = False
     classification_thresh = 0.5
@@ -88,17 +88,19 @@ if __name__ == '__main__':
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
     # model_name = 'MLP_attn_freq100_subsampled.h5'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    # model_name = 'MLP_attn_proto.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+    model_name = 'MLP_attn_proto.h5'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
-    model_name = 'MLP_attn_leaves_subsampled.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+    # model_name = 'MLP_attn_leaves_subsampled.h5'
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # model_name = 'MLP_attn_nda.h5'
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+    # embedding_file = 'data/Law2Vec.200d_data.npy'
+    # vocab_file = 'data/Law2Vec.200d_vocab.json'
     # embedding_file = 'data/sec_fasttext_vecs_data.npy'
     # vocab_file = 'data/sec_fasttext_vecs_vocab.json'
 

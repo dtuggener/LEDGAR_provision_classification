@@ -34,7 +34,7 @@ if __name__ == '__main__':
     label_counts = Counter(labels)
 
     min_freq = 100
-    max_freq = 100
+    target_freq = 100
 
     x, y, doc_ids = shuffle_data(x, y, doc_ids)
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     sampled_x, sampled_y, sampled_docids = [], [], []
     for text, labels, doc_id in zip(x, y, doc_ids):
         for label in labels:
-            if label_counts[label] >= min_freq and seen_labels[label] < max_freq:
+            if label_counts[label] >= min_freq and seen_labels[label] < target_freq:
                 sample_labels = [l for l in labels if label_counts[l] >= min_freq]
                 for l in sample_labels:
                     seen_labels[l] += 1
@@ -54,6 +54,9 @@ if __name__ == '__main__':
     sampled_labels = [l for labels in sampled_y for l in labels]
     sampled_label_counts = Counter(sampled_labels)
 
-    write_jsonl(corpus_file.replace('.jsonl', '_subsampled.jsonl'), sampled_x, sampled_y, sampled_docids)
+    write_jsonl(corpus_file.replace('.jsonl', '_subsampled.jsonl'),
+        sampled_x,
+        sampled_y,
+        sampled_docids)
 
 
