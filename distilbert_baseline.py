@@ -225,6 +225,8 @@ def tune_threshs(probas, truth):
         )
         res[i] = thresh
 
+    res[res == 0] = 0.5
+
     return res
 
 

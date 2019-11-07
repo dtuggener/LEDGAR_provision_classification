@@ -80,7 +80,7 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = True
+    do_train = False
     do_test = True
     do_test_nda = False
     classification_thresh = 0.5
@@ -97,10 +97,10 @@ if __name__ == '__main__':
     # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
     # model_name = 'MLP_attn_nda.h5'
 
-    # embedding_file = 'data/wiki.multi.en.vec_data.npy'
-    # vocab_file = 'data/wiki.multi.en.vec_vocab.json'
-    embedding_file = 'data/sec_fasttext_vecs_data.npy'
-    vocab_file = 'data/sec_fasttext_vecs_vocab.json'
+    embedding_file = 'data/wiki.multi.en.vec_data.npy'
+    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+    # embedding_file = 'data/sec_fasttext_vecs_data.npy'
+    # vocab_file = 'data/sec_fasttext_vecs_vocab.json'
 
     embeddings = numpy.load(embedding_file)
     vocab = json.load(open(vocab_file))
@@ -114,6 +114,7 @@ if __name__ == '__main__':
     print(len(dataset.y_dev), 'dev samples')
 
     # oov_counts = count_oovs(dataset.x_train)
+    # breakpoint()
 
     mlb = MultiLabelBinarizer().fit(dataset.y_train)
     num_classes = mlb.classes_.shape[0]
