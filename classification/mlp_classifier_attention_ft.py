@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
         y_pred_bin = model.predict(data_generator(dataset.x_test, test_y, max_sent_length, embeddings,
                                                      batch_size=batch_size), verbose=1)
-        
+
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
 

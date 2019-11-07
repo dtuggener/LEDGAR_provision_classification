@@ -99,8 +99,8 @@ if __name__ == '__main__':
 
     # embedding_file = 'data/wiki.multi.en.vec_data.npy'
     # vocab_file = 'data/wiki.multi.en.vec_vocab.json'
-    embedding_file = 'data/wiki.multi.en.vec_data.npy'
-    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+    embedding_file = 'data/sec_fasttext_vecs_data.npy'
+    vocab_file = 'data/sec_fasttext_vecs_vocab.json'
 
     embeddings = numpy.load(embedding_file)
     vocab = json.load(open(vocab_file))
