@@ -1,3 +1,5 @@
+# from https://github.com/lzfelix/keras_attention/blob/master/attention/layers.py
+
 from keras import backend as K
 from keras import regularizers
 from keras import constraints

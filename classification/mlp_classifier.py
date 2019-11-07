@@ -19,21 +19,11 @@ from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
 def build_model(x_train, num_classes):
     print('Building model...')
     input_shape = x_train[0].shape[0]
-    # hidden_size_1 = int(input_shape * 1.5)
-    # hidden_size_2 = int(input_shape / 2)
-    # hidden_size_2 = int(num_classes * 1.5)
-    hidden_size_2 = input_shape * 2
+    hidden_size = input_shape * 2
     model = Sequential()
-
-    model.add(Dense(hidden_size_2, input_shape=(input_shape,), activation='relu'))
-    model.add(Dropout(0.5, seed=42))
-    """
-    model.add(Dense(hidden_size_1, input_shape=(input_shape,), kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
-    model.add(Dropout(0.5, seed=42))
-    model.add(Dense(hidden_size_2, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='relu'))
-    model.add(Dropout(0.5, seed=42))
-    """
-    model.add(Dense(num_classes, kernel_initializer=keras.initializers.glorot_uniform(seed=42), activation='sigmoid'))
+    model.add(Dense(hidden_size, input_shape=(input_shape,), activation='relu'))
+    # model.add(Dropout(0.5, seed=42))
+    model.add(Dense(num_classes, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
     return model
@@ -49,14 +39,14 @@ if __name__ == '__main__':
     # model_name = 'MLP_avg_NDA.h5'
     # model_name = 'MLP_avg_tfidf_NDA.h5'
     # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # model_name = 'MLP_avg_proto.h5'
-    # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
+    model_name = 'MLP_avg_proto.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
     # model_name = 'MLP_avg_leaves.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # model_name = 'MLP_avg_freq100.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
-    model_name = 'MLP_avg_leaves_subsampled.h5'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+    # model_name = 'MLP_avg_leaves_subsampled.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
 
     epochs = 50
     batch_size = 8
@@ -82,12 +72,11 @@ if __name__ == '__main__':
     test_x = embed(dataset.x_test, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
     dev_x = embed(dataset.x_dev, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
 
+    """
     # Calculate class weights
     all_labels: List[str] = [l for labels in dataset.y_train for l in labels]
     label_counts = Counter(all_labels)
     sum_labels_counts = sum(label_counts.values())
-
-    """
     # TODO use sklearn's method to calculate class weights
     class_weight = {numpy.where(mlb.classes_ == label)[0][0]:
                         1 - (cnt/sum_labels_counts)
@@ -99,13 +88,12 @@ if __name__ == '__main__':
         early_stopping = EarlyStopping(monitor='val_loss',
                                        mode='min', verbose=1,
                                        patience=3, restore_best_weights=True)
-        # tensor_board = TensorBoard()
         print('Train model...')
         try:
             model.fit(train_x, train_y, batch_size=batch_size, epochs=epochs,
                       verbose=1, validation_data=(dev_x, dev_y),
                       # class_weight=class_weight,
-                      callbacks=[early_stopping]) #, tensor_board])
+                      callbacks=[early_stopping])
         except KeyboardInterrupt:
             pass
         model.save('saved_models/%s' % model_name, overwrite=True)
