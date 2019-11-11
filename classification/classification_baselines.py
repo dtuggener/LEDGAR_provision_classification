@@ -6,7 +6,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.linear_model import LogisticRegression
-from utils import split_corpus, SplitDataSet, evaluate_multilabels, tune_clf_thresholds
+from utils import split_corpus, SplitDataSet, evaluate_multilabels, \
+    tune_clf_thresholds
 
 
 def train_classifiers(x_train: numpy.array, y_train: numpy.array) -> OneVsRestClassifier:
@@ -40,8 +41,17 @@ def stringify_labels(y_vecs: numpy.array, mlb: MultiLabelBinarizer,
     return y_pred
 
 
-def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[List[str]]:
+def classify_by_labelname(x_test: List[str], y_train: List[List[str]],
+                          prop_nda: bool = False) -> List[List[str]]:
+
     label_set = set(l for labels in y_train for l in labels)
+
+    if prop_nda:  # Map proprietary label names to sec provision names
+        import json
+        prop2sec = json.load(open('../prop2sec_map.json'))
+        sec2prop = {v: l for l, v in prop2sec.items()}
+        label_set = {sec2prop[l].lower() for l in label_set if l in sec2prop}
+
     y_preds = []
     for i, x in enumerate(x_test):
         print(i, '\r', end='', flush=True)
@@ -57,9 +67,9 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]]) -> List[L
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = False
+    predict_with_labelnames = True
     do_train = False
-    do_test = True
+    do_test = False
     test_prop_nda = True
 
     # corpus_file = '../sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
@@ -90,7 +100,7 @@ if __name__ == '__main__':
 
     if predict_with_labelnames:
         print('Predicting with label names')
-        y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train)
+        y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train, prop_nda=False)
         evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
 
     print('Vectorizing')
@@ -118,10 +128,6 @@ if __name__ == '__main__':
         label_threshs = tune_clf_thresholds(y_preds_lr_probs_dev, dataset.y_dev, mlb)
         y_preds_lr_probs = classifier.predict_proba(x_test_vecs)
         y_preds_lr = stringify_labels(y_preds_lr_probs, mlb, label_threshs=label_threshs)
-        # y_preds_lr_no_tresh = stringify_labels(y_preds_lr_probs, mlb)
-        # print('LogReg results without classifier threshold tuning')
-        # evaluate_multilabels(dataset.y_test, y_preds_lr_no_tresh, do_print=True)
-        print('LogReg results with classifier threshold tuning')
         evaluate_multilabels(dataset.y_test, y_preds_lr, do_print=True)
 
     if test_prop_nda:
@@ -157,7 +163,6 @@ if __name__ == '__main__':
         y_preds_prop = stringify_labels(y_preds_prop_prob_test, mlb, label_threshs=label_threshs_prop)
         evaluate_multilabels(dataset_nda.y_test, y_preds_prop, do_print=True)
 
-        # Join proprietary data and LEDGAR data; use separate TF IDF # TODO really? Use TFIDF of prop data
         print('Mixed: train on LEDGAR and proprietary, predict proprietary')
         x_train = dataset.x_train + dataset_nda.x_train[:int(len(dataset_nda.x_train)/4)]
 
@@ -176,20 +181,3 @@ if __name__ == '__main__':
         y_preds_nda_probs_mixed = classifier_mixed.predict_proba(x_test_vecs)
         y_preds_nda_mixed = stringify_labels(y_preds_nda_probs_mixed, mlb, label_threshs=label_threshs_nda_mixed)
         evaluate_multilabels(dataset_nda.y_test, y_preds_nda_mixed, do_print=True)
-
-        """
-        # Use all data as test set
-        nda_x = dataset_nda.x_train + dataset_nda.x_test + dataset_nda.x_dev
-        nda_y = dataset_nda.y_train + dataset_nda.y_test + dataset_nda.y_dev
-        nda_x_vecs = tfidfizer.transform(nda_x)
-        nda_y_vecs = mlb.transform(nda_y)
-        
-        y_preds_nda_probs = classifier.predict_proba(nda_x_vecs)
-        y_preds_nda = stringify_labels(y_preds_nda_probs, mlb, label_threshs=label_threshs)
-        y_preds_nda_nothresh = stringify_labels(y_preds_nda_probs, mlb)
-        
-        print('LogReg results NDA without classifier threshold tuning')
-        evaluate_multilabels(nda_y, y_preds_nda_nothresh, do_print=True)
-        print('LogReg results NDA with classifier threshold tuning')
-        evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
-        """

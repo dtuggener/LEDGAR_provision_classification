@@ -14,7 +14,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.callbacks import EarlyStopping
 from attn_layer import AttentionLayer
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
-    evaluate_multilabels, tune_clf_thresholds
+    evaluate_multilabels, tune_clf_thresholds, calc_class_weights
 
 
 def build_model(max_sent_length, vocab2int, embeddings, num_labels):
@@ -82,20 +82,20 @@ if __name__ == '__main__':
 
     do_train = True
     do_test = True
-    do_test_nda = False
+    do_test_nda = True
     classification_thresh = 0.5
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
     # model_name = 'MLP_attn_freq100_subsampled.h5'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    model_name = 'MLP_attn_proto.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+    # model_name = 'MLP_attn_proto.h5'
 
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
     # model_name = 'MLP_attn_leaves_subsampled.h5'
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # model_name = 'MLP_attn_nda.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    model_name = 'MLP_attn_nda.h5'
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
@@ -140,15 +140,8 @@ if __name__ == '__main__':
         model = build_model(max_sent_length, vocab, embeddings, num_classes)
         print(model.summary())
 
-        # TODO calculate weights in sklearn fashion
-        """
-        # Calculate class weights
-        all_labels: List[str] = [l for labels in train_y_str for l in labels]
-        label_counts = Counter(all_labels)
-        sum_labels_counts = sum(label_counts.values())
-        class_weight = {numpy.where(mlb.classes_ == label)[0][0]: 1 - (cnt / sum_labels_counts) for label, cnt in
-                        label_counts.items()}
-        """
+        class_weights = calc_class_weights(train_y, mlb.classes_)
+        class_weights = {i: w for i, w in enumerate(class_weights)}
 
         early_stopping = EarlyStopping(monitor='val_loss',
                                        patience=3,
@@ -200,6 +193,12 @@ if __name__ == '__main__':
         train_x = pad_sequences(train_x_int, max_sent_length)
         test_x = pad_sequences(test_x_int, max_sent_length)
         dev_x = pad_sequences(dev_x_int, max_sent_length)
+
+        # Use full data, except dev
+        all_test = False
+        if all_test:
+            test_x = numpy.append(test_x, train_x, axis=0)
+            dataset.y_test = numpy.append(dataset.y_test, dataset.y_train, axis=0)
 
         print('predicting NDA')
         y_pred_bin_dev = model.predict(dev_x, verbose=1)

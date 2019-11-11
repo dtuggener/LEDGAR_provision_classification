@@ -298,6 +298,17 @@ def tune_clf_thresholds(y_pred_vecs: numpy.array, test_y: List[List[str]],
     return label_threshs
 
 
+def calc_class_weights(y: numpy.array, label2ix: Dict[str, int])\
+        -> Dict[str, float]:
+    total = 0
+    class_weights = numpy.zeros(len(label2ix), dtype=numpy.float32)
+    for labels in y:
+        class_weights += labels
+        total += 1
+    class_weights = total / (len(label2ix) * class_weights)
+    return class_weights
+
+
 if __name__ == '__main__':
     corpus_file = 'sec_corpus_2016-2019_clean_sampled.jsonl'
     ds = split_corpus(corpus_file)

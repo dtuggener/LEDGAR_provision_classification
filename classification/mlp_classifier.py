@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
 
     epochs = 50
-    batch_size = 8
+    batch_size = 32
 
     print('Loading corpus', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
