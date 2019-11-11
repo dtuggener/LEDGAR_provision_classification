@@ -153,7 +153,7 @@ if __name__ == '__main__':
                       epochs=50,
                       verbose=1,
                       validation_data=(dev_x, dev_y),
-                      # class_weight=class_weight,
+                      class_weight=class_weights,
                       callbacks=[early_stopping])
         except KeyboardInterrupt:
             pass
