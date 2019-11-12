@@ -67,9 +67,9 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]],
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = True
+    predict_with_labelnames = False
     do_train = False
-    do_test = False
+    do_test = True
     test_prop_nda = True
 
     # corpus_file = '../sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
@@ -133,15 +133,32 @@ if __name__ == '__main__':
     if test_prop_nda:
         nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
-        dataset_nda: SplitDataSet = split_corpus(nda_file)
 
+        import json
+        nda_x, nda_y = [], []
+        for line in open(nda_file):
+            data = json.loads(line)
+            nda_x.append(data['provision'])
+            nda_y.append(list(data['label']))
+
+        nda_x_vecs = tfidfizer.transform(nda_x)
+        nda_y_vecs = mlb.transform(nda_y)
+        y_preds_nda_probs = classifier.predict_proba(nda_x_vecs)
+        y_preds_nda = stringify_labels(y_preds_nda_probs, mlb,
+                                       label_threshs=label_threshs)
+
+        evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
+
+        """
+        dataset_nda: SplitDataSet = split_corpus(nda_file)
+        
         nda_x_train_vecs = tfidfizer.transform(dataset_nda.x_train)
         nda_x_test_vecs = tfidfizer.transform(dataset_nda.x_test)
         nda_x_dev_vecs = tfidfizer.transform(dataset_nda.x_dev)
         nda_y_train = mlb.transform(dataset_nda.y_train)
         nda_y_test = mlb.transform(dataset_nda.y_test)
         nda_y_dev = mlb.transform(dataset_nda.y_dev)
-
+    
         # Zero-shot; no training on prop data
         print('Zero-shot: train on LEDGAR, predict proprietary')
         y_preds_nda_probs_dev = classifier.predict_proba(nda_x_dev_vecs)
@@ -172,12 +189,10 @@ if __name__ == '__main__':
         x_test_vecs = tfidfizer_mixed.transform(dataset_nda.x_test)
 
         y_train = dataset.y_train + dataset_nda.y_train[:int(len(dataset_nda.x_train)/4)]
-
         classifier_mixed = train_classifiers(x_train_vecs, mlb.transform(y_train))
-
         y_preds_nda_probs_dev_mixed = classifier_mixed.predict_proba(x_dev_vecs)
         label_threshs_nda_mixed = tune_clf_thresholds(y_preds_nda_probs_dev_mixed, dataset_nda.y_dev, mlb)
-
         y_preds_nda_probs_mixed = classifier_mixed.predict_proba(x_test_vecs)
         y_preds_nda_mixed = stringify_labels(y_preds_nda_probs_mixed, mlb, label_threshs=label_threshs_nda_mixed)
         evaluate_multilabels(dataset_nda.y_test, y_preds_nda_mixed, do_print=True)
+        """

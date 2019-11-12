@@ -2,6 +2,7 @@ import json
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import re
 from typing import List
 from collections import defaultdict, Counter
 from scipy.spatial.distance import pdist, squareform
@@ -227,6 +228,27 @@ if __name__ == '__main__':
 
     labels = [l for labels in y for l in labels]
     label_counts = Counter(labels)
+
+    print('Counting tokens')
+    vocab = set()
+    token_counts, provisions_per_doc = [], []
+    curr_doc, provision_counts = '', 0
+    for sample, doc_id in zip(x, doc_ids):
+        if not doc_id == curr_doc:
+            curr_doc = doc_id
+            provisions_per_doc.append(provision_counts)
+            provision_counts = 0
+        provision_counts += 1
+        tokens = re.findall('\w+', sample.lower())
+        token_counts.append((len(tokens)))
+        vocab.update(tokens)
+    print('Total tokens', sum(token_counts))
+    print('Mean token count', numpy.mean(token_counts))
+    print('Standard deviation', numpy.std(token_counts))
+    print('Vocabulary size', len(vocab))
+    print('Mean provision count per doc', numpy.mean(provisions_per_doc))
+    print('Standard deviation', numpy.std(provisions_per_doc))
+
     create_subcorpora(x, y, doc_ids)
 
     # avg_tok_num = numpy.mean([len(text.split()) for text in x])

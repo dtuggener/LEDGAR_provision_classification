@@ -10,7 +10,7 @@ def write_fasttext_file(x, y, outfile, lowercasing=False):
             label_str = ' '.join(['__label__' + label for label in labels])
             if lowercasing:
                 text = text.lower()
-            f.write(label_str + ' ' + text + '\n')
+            f.write(label_str + '\t"' + text + '"\n')
 
 
 def predict(model, texts, lowercasing=False):
@@ -30,13 +30,12 @@ if __name__ == '__main__':
     do_train = True
     lowercasing = True
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # classifier_file = 'saved_models/fasttext_sec_clf_nda.mdl'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    classifier_file = 'saved_models/fasttext_sec_clf_nda.mdl'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
     # classifier_file = 'saved_models/fasttext_sec_clf_freq100.mdl'
-
-    corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
-    classifier_file = 'saved_models/fasttext_sec_clf_leaves_subsampled.mdl'
+    #corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+    #classifier_file = 'saved_models/fasttext_sec_clf_leaves_subsampled.mdl'
 
 
     print('Loading corpus from', corpus_file)
@@ -58,7 +57,7 @@ if __name__ == '__main__':
 
     if do_train:
         print('Training')
-        model = fasttext.train_supervised(input=train_file, epoch=10, bucket=200000, loss='ova')
+        model = fasttext.train_supervised(input=train_file, epoch=50, bucket=200000, loss='ova')
         model.save_model(classifier_file)
     else:
         model = fasttext.load_model(classifier_file)
