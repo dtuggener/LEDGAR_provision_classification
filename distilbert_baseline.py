@@ -215,17 +215,19 @@ def tune_threshs(probas, truth):
     res = np.zeros(probas.shape[1])
 
     for i in range(probas.shape[1]):
-        thresh = max(
-            np.linspace(
-                np.min(probas[:, i]),
-                np.max(probas[:, i]),
-                num=100,
-            ),
-            key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t))
-        )
-        res[i] = thresh
-
-    res[res == 0] = 0.5
+        if np.sum(truth[:, i]) > 4 :
+            thresh = max(
+                np.linspace(
+                    np.min(probas[:, i]),
+                    np.max(probas[:, i]),
+                    num=100,
+                ),
+                key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t))
+            )
+            res[i] = thresh
+        else:
+            # conservative; assign high threshold for low-freq labels
+            res[i] = np.max(probas[:, i])
 
     return res
 
@@ -400,7 +402,7 @@ def main():
     res = evaluate_multilabels(
         y=multihot_to_label_lists(prediction_data['truth'], don_data.label_map),
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
-        do_print=False,
+        do_print=True,
     )
     open('evaluation_results.txt', 'w', encoding='utf-8').write(str(res))
 

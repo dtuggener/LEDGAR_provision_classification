@@ -80,7 +80,7 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = True
+    do_train = False
     do_test = True
     do_test_nda = True
     classification_thresh = 0.5
@@ -177,6 +177,22 @@ if __name__ == '__main__':
     if do_test_nda:
         nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
+
+        nda_x, nda_y = [], []
+        for line in open(nda_file):
+            data = json.loads(line)
+            nda_x.append(data['provision'])
+            nda_y.append(list(data['label']))
+
+        nda_x_int =  [[vocab[w] for w in re.findall('\w+', x_.lower()) if w in vocab]
+                       for x_ in nda_x]
+        nda_x_vecs = pad_sequences(nda_x_int, max_sent_length)
+
+        y_pred_bin= model.predict(nda_x_vecs, verbose=1)
+        y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
+        evaluate_multilabels(nda_y, y_pred, do_print=True)
+
+        """
         dataset: SplitDataSet = split_corpus(nda_file)
 
         train_y = mlb.transform(dataset.y_train)
@@ -206,3 +222,4 @@ if __name__ == '__main__':
         y_pred_bin = model.predict(test_x, verbose=1)
         y_pred = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
         evaluate_multilabels(dataset.y_test, y_pred, do_print=True)
+        """

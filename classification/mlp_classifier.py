@@ -31,16 +31,15 @@ def build_model(x_train, num_classes):
 
 if __name__ == '__main__':
 
-    train_de = True
+    train_de = False
     test_de = True
     use_tfidf = False
-    test_nda = False
+    test_nda = True
 
-    # model_name = 'MLP_avg_NDA.h5'
-    # model_name = 'MLP_avg_tfidf_NDA.h5'
-    # corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    model_name = 'MLP_avg_proto.h5'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+    model_name = 'MLP_avg_NDA.h5'
+    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # model_name = 'MLP_avg_proto.h5'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
     # model_name = 'MLP_avg_leaves.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # model_name = 'MLP_avg_freq100.h5'
