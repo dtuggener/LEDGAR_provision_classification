@@ -32,20 +32,27 @@ def build_model(x_train, num_classes):
 if __name__ == '__main__':
 
     train_de = False
-    test_de = True
+    test_de = False
     use_tfidf = False
     test_nda = True
 
-    model_name = 'MLP_avg_NDA.h5'
-    corpus_file = '../sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # model_name = 'MLP_avg_NDA_prop.h5'
+    # corpus_file = '../nda_proprietary_data2_sampled.jsonl'
+
     # model_name = 'MLP_avg_proto.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+
     # model_name = 'MLP_avg_leaves.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
+
     # model_name = 'MLP_avg_freq100.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+
     # model_name = 'MLP_avg_leaves_subsampled.h5'
     # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
+
+    model_name = 'MLP_avg_NDA.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
 
     epochs = 50
     batch_size = 32
@@ -101,27 +108,30 @@ if __name__ == '__main__':
         print('Loading model')
         model = keras.models.load_model('saved_models/%s' % model_name)
 
-    y_pred_bin_dev = model.predict(dev_x)
-    label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb, objective='f1')
-    y_pred_bin = model.predict(test_x)
-    y_pred_thresh = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
-    print('MLP results with classifier threshold tuning')
-    res = evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
-    with open('MLP_evaluation_results_%s.txt' % model_name, 'w', encoding='utf-8') as f:
-        f.write(str(res))
+    if test_de:
+        y_pred_bin_dev = model.predict(dev_x)
+        label_threshs = tune_clf_thresholds(y_pred_bin_dev, dataset.y_dev, mlb, objective='f1')
+        y_pred_bin = model.predict(test_x)
+        y_pred_thresh = stringify_labels(y_pred_bin, mlb, label_threshs=label_threshs)
+        print('MLP results with classifier threshold tuning')
+        res = evaluate_multilabels(dataset.y_test, y_pred_thresh, do_print=True)
 
     if test_nda:
-        nda_file = '../nda_proprietary_data2_sampled.jsonl'
+        nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
         dataset_nda: SplitDataSet = split_corpus(nda_file)
-        nda_x = dataset_nda.x_train + dataset_nda.x_test + dataset_nda.x_dev
-        nda_y = dataset_nda.y_train + dataset_nda.y_test + dataset_nda.y_dev
-        nda_x_vecs = embed(nda_x, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
-        nda_y_vecs = mlb.transform(nda_y)
-        y_preds_nda_probs = model.predict(nda_x_vecs)
-        y_preds_nda = stringify_labels(y_preds_nda_probs, mlb, label_threshs=label_threshs)
-        y_preds_nda_nothresh = stringify_labels(y_preds_nda_probs, mlb)
-        print('MLP results NDA without classifier threshold tuning')
-        evaluate_multilabels(nda_y, y_preds_nda_nothresh, do_print=True)
+        train_y = mlb.transform(dataset_nda.y_train)
+        test_y = mlb.transform(dataset_nda.y_test)
+        dev_y = mlb.transform(dataset_nda.y_dev)
+
+        nda_x_train = embed(dataset_nda.x_train, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
+        nda_x_test = embed(dataset_nda.x_test, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
+        nda_x_dev = embed(dataset_nda.x_dev, embeddings, vocab_en, use_tfidf=use_tfidf, avg_method='mean')
+
+        y_preds_nda_probs_dev = model.predict(nda_x_dev)
+        label_threshs = tune_clf_thresholds(y_preds_nda_probs_dev, dataset_nda.y_dev, mlb)
+        y_preds_nda_probs_test = model.predict(nda_x_test, verbose=1)
+        y_preds_nda = stringify_labels(y_preds_nda_probs_test, mlb, label_threshs=label_threshs)
+
         print('MLP results NDA with classifier threshold tuning')
-        evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
+        evaluate_multilabels(dataset_nda.y_test, y_preds_nda, do_print=True)

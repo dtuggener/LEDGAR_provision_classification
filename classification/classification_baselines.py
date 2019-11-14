@@ -67,7 +67,7 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]],
 
 if __name__ == '__main__':
 
-    predict_with_labelnames = False
+    predict_with_labelnames = True
     do_train = False
     do_test = True
     test_prop_nda = True
@@ -81,14 +81,16 @@ if __name__ == '__main__':
     # corpus_file = '../sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_roots.pkl'
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
+    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
+    # classifier_file = 'saved_models/logreg_sec_clf_nda.pkl'
 
     # corpus_file = '../sec_corpus_2016-2019_clean_proto.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_proto.pkl'
 
     # corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
     # classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
+
+    corpus_file = '../nda_proprietary_data2_sampled.jsonl'
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)
@@ -100,8 +102,10 @@ if __name__ == '__main__':
 
     if predict_with_labelnames:
         print('Predicting with label names')
-        y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train, prop_nda=False)
+        y_preds_labelnames = classify_by_labelname(dataset.x_test, dataset.y_train,
+                                                   prop_nda=True)
         evaluate_multilabels(dataset.y_test, y_preds_labelnames, do_print=True)
+        breakpoint()
 
     print('Vectorizing')
     tfidfizer = TfidfVectorizer(sublinear_tf=True)
@@ -134,6 +138,7 @@ if __name__ == '__main__':
         nda_file = 'data/nda_proprietary_data2_sampled.jsonl'
         print('Loading corpus from', nda_file)
 
+        """
         import json
         nda_x, nda_y = [], []
         for line in open(nda_file):
@@ -148,8 +153,8 @@ if __name__ == '__main__':
                                        label_threshs=label_threshs)
 
         evaluate_multilabels(nda_y, y_preds_nda, do_print=True)
-
         """
+
         dataset_nda: SplitDataSet = split_corpus(nda_file)
         
         nda_x_train_vecs = tfidfizer.transform(dataset_nda.x_train)
@@ -180,6 +185,7 @@ if __name__ == '__main__':
         y_preds_prop = stringify_labels(y_preds_prop_prob_test, mlb, label_threshs=label_threshs_prop)
         evaluate_multilabels(dataset_nda.y_test, y_preds_prop, do_print=True)
 
+        """
         print('Mixed: train on LEDGAR and proprietary, predict proprietary')
         x_train = dataset.x_train + dataset_nda.x_train[:int(len(dataset_nda.x_train)/4)]
 
@@ -196,3 +202,4 @@ if __name__ == '__main__':
         y_preds_nda_mixed = stringify_labels(y_preds_nda_probs_mixed, mlb, label_threshs=label_threshs_nda_mixed)
         evaluate_multilabels(dataset_nda.y_test, y_preds_nda_mixed, do_print=True)
         """
+
