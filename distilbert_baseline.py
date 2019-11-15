@@ -168,6 +168,10 @@ def train(train_dataset, model, train_params, class_weights=None):
     return global_step, tr_loss / global_step
 
 
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
 def evaluate(eval_dataset, model):
     batch_size = 8
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -206,7 +210,7 @@ def evaluate(eval_dataset, model):
                 )
 
     return {
-        'pred': preds,
+        'pred': sigmoid(preds),
         'truth': out_label_ids,
     }
 
@@ -214,20 +218,24 @@ def evaluate(eval_dataset, model):
 def tune_threshs(probas, truth):
     res = np.zeros(probas.shape[1])
 
+    assert np.alltrue(probas > 0.0)
+    assert np.alltrue(probas < 1.0)
+
     for i in range(probas.shape[1]):
         if np.sum(truth[:, i]) > 4 :
             thresh = max(
                 np.linspace(
-                    np.min(probas[:, i]),
-                    np.max(probas[:, i]),
+                    0.0,
+                    1.0,
                     num=100,
                 ),
-                key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t))
+                key=lambda t: f1_score(y_true=truth[:, i], y_pred=(probas[:, i] > t), pos_label=1, average='binary')
             )
             res[i] = thresh
         else:
             # conservative; assign high threshold for low-freq labels
             res[i] = np.max(probas[:, i])
+            res[i] = 0.5
 
     return res
 
