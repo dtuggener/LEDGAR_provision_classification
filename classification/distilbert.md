@@ -1,29 +1,4 @@
-
-# How to run a distilbert experiment
-
-## setup
-for more in depth info consult the
-[cloudlab info page](https://info.cloudlab.zhaw.ch/pages/gpu/getting_started.html)
-
-* connect to cluster: `ssh user@gpulogin.cloudlab.zhaw.ch`
-* pull latest pytorch docker image: `singularity pull docker://pytorch/pytorch:latest`
-    this will create a file `pytorch-latest.simg`
-* clone *sec_edgar_provision_classification* repository
-* change the `cd` command in *run_distilbert_gpu_cluster.sh* to navigate to where your repository is located
-
-
-## run an experiment
-
-* modify *run_distilbert_gpu_cluster.sh* to run *distilbert_baseline.py* with your
-preferred command line arguments
-* run `srun --pty --ntasks=1 --cpus-per-task=4 --mem=32G --gres=gpu:1 singularity exec pytorch-latest.simg /path/to/run_distilbert_gpu_cluster.sh`
-
-Note that the `srun` command is assumed to be run in your home directory.
-
-## command line arguments
-
 main usage: `python -m distilbert_baseline --data /path/to/your.jsonl --mode dev_or_test`
-Comment: I found fiddling with `--batch_size` to be the most fruitful
 
 Arguments:
 * `-h` or `--help`: show a help message and exit

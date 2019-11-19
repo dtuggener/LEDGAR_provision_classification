@@ -202,7 +202,6 @@ def add_ancestor_support(g):
 if __name__ == '__main__':
 
     corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
-    # corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
     print('Loading data from', corpus_file)
 
     y: List[List[str]] = []
@@ -211,10 +210,8 @@ if __name__ == '__main__':
         labeled_provision = json.loads(line)
         y.append(labeled_provision['label'])
 
-    graph = label_hierarchy_graph(y)
+    graph = real_label_hierarchy_graph(y)
     graph = prune_graph(graph)
-    # graph = real_label_hierarchy_graph(y)
-    # graph = prune_graph(graph)
 
     graph = add_ancestor_support(graph)
 

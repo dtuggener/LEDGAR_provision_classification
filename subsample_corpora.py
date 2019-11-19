@@ -16,7 +16,6 @@ def shuffle_data(x, y, d):
 
 if __name__ == '__main__':
 
-    # corpus_file = 'sec_corpus_2016-2019_clean_projected_real_roots.jsonl'
     corpus_file = 'sec_corpus_2016-2019_clean_freq100.jsonl'
 
     x: List[str] = []

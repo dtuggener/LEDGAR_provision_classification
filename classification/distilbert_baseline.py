@@ -233,8 +233,7 @@ def tune_threshs(probas, truth):
             )
             res[i] = thresh
         else:
-            # conservative; assign high threshold for low-freq labels
-            res[i] = np.max(probas[:, i])
+            # res[i] = np.max(probas[:, i])
             res[i] = 0.5
 
     return res
@@ -412,7 +411,6 @@ def main():
         y_preds=multihot_to_label_lists(predicted_mat, don_data.label_map),
         do_print=True,
     )
-    open('evaluation_results.txt', 'w', encoding='utf-8').write(str(res))
 
 
 def build_arg_parser():

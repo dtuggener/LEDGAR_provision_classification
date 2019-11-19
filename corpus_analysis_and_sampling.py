@@ -1,14 +1,9 @@
 import json
 import numpy
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import re
 from typing import List
 from collections import defaultdict, Counter
-from scipy.spatial.distance import pdist, squareform
-from sklearn.decomposition import PCA
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 
 
 def label_stats(x, y, doc_ids, n=10):
@@ -19,25 +14,6 @@ def label_stats(x, y, doc_ids, n=10):
         print(label, cnt)
     ml = [(text, labels) for text, labels in zip(x, y) if len(labels) > 1]
     print('{} provisions with multilabels ({}%)'.format(len(ml), round(100*len(ml)/len(y), 2)))
-
-
-def provision_type_similarity(vecs_per_label, do_plot=False):
-    """Pairwise similarity between averaged tf idf vectors of provisions sharing a label"""
-    label_set = list(set(vecs_per_label.keys()))
-    breakpoint()
-    avg_vecs = [numpy.mean(vecs_per_label[label], axis=0) for label in label_set]
-    similar_labels = []
-    dists = squareform(pdist(avg_vecs))
-    for i, (label, label_dist) in enumerate(zip(label_set, dists)):
-        for j, label2 in enumerate(label_set[i+1:]):
-            similar_labels.append((label_dist[i+1+j], label, label2))
-    similar_labels.sort()
-    if do_plot:
-        from scipy.cluster.hierarchy import linkage, dendrogram
-        hcluster = linkage(avg_vecs, method='ward')
-        dendrogram(hcluster, orientation='right', labels=label_set)
-        plt.savefig('/tmp/label_similarity_dengrogram.png')
-    return similar_labels
 
 
 def sample_frequent_labels(x, y, doc_ids, min_freq=None, max_freq=None, n_labels=None):
@@ -91,41 +67,6 @@ def avg_provision_count(y, doc_ids):
     return avg_prov_count
 
 
-def plot_label_pca_means(x_tfidf, y):
-    colors = list(mcolors.CSS4_COLORS.keys())
-    label2color = {l: c for l, c in zip(y, colors)}
-    pca = PCA(n_components=2).fit_transform(x_tfidf)
-    for vec, label in zip(pca, y):
-        plt.scatter(vec[0], vec[1], label=label, c=label2color[label])
-    plt.legend()
-    breakpoint()
-
-
-def get_provision_diversity(x_tfidf: numpy.array, y: List[List[str]]):
-    div = []
-    labels2vecs = defaultdict(list)
-    for vec, labels in zip(x_tfidf, y):
-        if len(labels) > 1:
-            continue  # omit multilabels
-        labels2vecs[labels[0]].append(vec)
-    breakpoint()
-    for label, vecs in labels2vecs.items():
-        vecs = [v.toarray()[0] for v in vecs]
-        avg_dist = numpy.mean(pdist(numpy.array(vecs), metric='cosine'))
-        div.append((avg_dist, label))
-    div.sort()
-    return div
-
-
-def remove_stopwords(x):
-    x_filt = []
-    stopWords = set(stopwords.words('english'))
-    for provision in x:
-        filt_toks = [w for w in word_tokenize(provision) if w.lower() not in stopWords]
-        x_filt.append(' '.join(filt_toks))
-    return x_filt
-
-
 def write_jsonl(out_file: str, x_small, y_small, doc_ids_small):
     print('Writing output')
     with open(out_file, 'w', encoding='utf8') as f:
@@ -156,25 +97,6 @@ def incremental_label_stats(x, y, doc_ids):
         label_stats(x_small, y_small, doc_ids_small, n=0)
 
 
-def label_cooc(y, doc_ids):
-    labels2docs = defaultdict(set)
-    for labels, doc_id in zip(y, doc_ids):
-        for label in labels:
-            labels2docs[label].add(doc_id)
-    label_list = list(labels2docs.keys())
-    similarities = []
-    for i, l1 in enumerate(label_list):
-        print('\r', i, end='', flush=True)
-        l1_docs = labels2docs[l1]
-        for l2 in label_list[i+1:]:
-            l2_docs = labels2docs[l2]
-            jacc_sim = len(l1_docs.intersection(l2_docs)) / len(l1_docs.union(l2_docs))
-            if jacc_sim > 0:
-                similarities.append((jacc_sim, l1, l2))
-    breakpoint()
-    similarities.sort(reverse=True)
-
-
 def plot_label_name_vs_freq(y):
     label_list = [l for labels in y for l in labels]
     label_counts_counter = Counter(label_list)
@@ -187,28 +109,6 @@ def plot_label_name_vs_freq(y):
     plt.xlabel('Label frequency')
     plt.ylabel('Label name token count')
     plt.savefig('label_name_length_vs_freq.pdf')
-
-
-def cluster_labels(y, doc_ids):
-    doc2labels = defaultdict(set)
-    labels2docs = defaultdict(set)
-    for labels, doc_id in zip(y, doc_ids):
-        doc2labels[doc_id].update(labels)
-        for label in labels:
-            labels2docs[label].add(doc_id)
-
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.cluster import KMeans
-    cv = CountVectorizer(binary=True, tokenizer=lambda x: x, preprocessor=lambda x: x)
-
-    label_vecs = cv.fit_transform(list(labels2docs.values()))
-    label_list = list(labels2docs.keys())
-    # TODO maybe softclustering is more appropriate here
-    kmeans = KMeans(n_clusters=50).fit(label_vecs)
-    clusters = defaultdict(list)
-    for i, label in enumerate(kmeans.labels_):
-        clusters[label].append(label_list[i])
-    breakpoint()
 
 
 if __name__ == '__main__':
@@ -226,10 +126,6 @@ if __name__ == '__main__':
         y.append(labeled_provision['label'])
         doc_ids.append(labeled_provision['source'])
 
-    labels = [l for labels in y for l in labels]
-    label_counts = Counter(labels)
-
-    print('Counting tokens')
     vocab = set()
     token_counts, provisions_per_doc = [], []
     curr_doc, provision_counts = '', 0
@@ -249,20 +145,12 @@ if __name__ == '__main__':
     print('Mean provision count per doc', numpy.mean(provisions_per_doc))
     print('Standard deviation', numpy.std(provisions_per_doc))
 
+    label_stats(x, y, doc_ids, n=0)
+
+    plot_label_name_vs_freq(y)
+
+    incremental_label_stats(x, y, doc_ids)
+
     create_subcorpora(x, y, doc_ids)
 
-    # avg_tok_num = numpy.mean([len(text.split()) for text in x])
-
-    # Find label clusters that often occur together in documents
-    # cluster_labels(y, doc_ids)
-
-    # label_stats(x, y, doc_ids, n=0)
-
-    # plot_label_name_vs_freq(y)
-
-    # incremental_label_stats(x, y, doc_ids)
-
-    # similar_labels = provision_type_similarity(vecs_per_label)
-
-    # label_cooc(y, doc_ids)
 

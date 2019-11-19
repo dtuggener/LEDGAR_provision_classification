@@ -107,48 +107,6 @@ def decompose_real_labels_to_roots(g: nx.DiGraph) -> Dict[str, List[str]]:
     return label2roots
 
 
-def calc_token_association(graph):
-    from collections import Counter
-    from labelset_hierarchy import get_ngrams
-    from nltk.corpus import stopwords
-    stop_words = set(stopwords.words('english'))
-    ngram_counts = Counter()
-
-    for node in graph.nodes():
-        for ngram in get_ngrams(node):
-            if ngram == node:
-                ngram_counts[ngram] += 1
-            else:
-                # Filter ngrams that consist of stopwords only, or those that have stop words at borders
-                filtered = [l for l in ngram if l not in stop_words]
-                if filtered:
-                    if not ngram[-1] in stop_words and not ngram[0] in stop_words:
-                        ngram_counts[ngram] += 1
-
-    jaccard_indexes = dict()
-    for ngram, cnt in ngram_counts.items():
-        if len(ngram) > 1:
-            nouns = [l for l in ngram if l not in stop_words]
-            if nouns:
-                delim = sum(ngram_counts[tuple([noun])] for noun in nouns)
-                if delim == 0:
-                    jaccard_indexes[ngram] = 0
-                else:
-                    jacc_ix = cnt / delim
-                    jaccard_indexes[ngram] = jacc_ix
-
-    return jaccard_indexes
-
-
-def find_strong_token_coocurrence(g: nx.DiGraph):
-    for node in g.nodes():
-        neighbors = list(g.successors(node))
-        for node2 in neighbors:
-            if g.nodes()[node2].get('weight', 0) < g.nodes()[node]['weight']:
-                print(node, node2)
-                breakpoint()
-
-
 def prune_sparse_roots(g: nx.DiGraph, min_freq: int = 50) -> Tuple[nx.DiGraph, List[Tuple[str]]]:
     spare_roots = [n for n in g.nodes() if not list(g.successors(n)) and
                    g.nodes()[n].get('weight', 0) < min_freq and
@@ -177,7 +135,6 @@ if __name__ == '__main__':
 
     # Decompose into (real) roots
     label_merges = decompose_real_labels_to_roots(graph)
-    # label_merges = decompose_to_roots(graph)
 
     print('Loading data from', corpus_file)
     x: List[str] = []
@@ -217,12 +174,3 @@ if __name__ == '__main__':
             json.dump({"provision": provision, "label": labels, "source": doc_id}, f, ensure_ascii=False)
             f.write('\n')
 
-    """
-    find_strong_token_coocurrence(graph)
-
-    # find association between tokens to identify non-splitable labels
-    token_assoc = calc_token_association(graph)
-
-    # find nodes where the average weight of the ancestors is low
-    find_lowfreq_hubs(graph)
-    """

@@ -84,20 +84,8 @@ if __name__ == '__main__':
     do_test_nda = True
     classification_thresh = 0.5
 
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_freq100_subsampled.jsonl'
-    # model_name = 'MLP_attn_freq100_subsampled.h5'
-
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    # model_name = 'MLP_attn_proto.h5'
-
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_projected_real_roots_subsampled.jsonl'
-    # model_name = 'MLP_attn_leaves_subsampled.h5'
-
-    # corpus_file = 'data/sec_corpus_2016-2019_clean_NDA_PTs2.jsonl'
-    # model_name = 'MLP_attn_nda.h5'
-
-    corpus_file = 'data/nda_proprietary_data2_sampled.jsonl'
-    model_name = 'MLP_attn_nda_prop.h5'
+    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
+    model_name = 'MLP_attn_proto.h5'
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'

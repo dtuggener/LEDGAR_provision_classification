@@ -11,7 +11,6 @@ import zipfile
 
 OUTDIR = '/home/don/resources/sec_crawler/data/'
 BASE_URL = 'https://www.sec.gov/Archives/'
-# YEARS = range(2019, 1992, -1)
 YEARS = range(2015, 1992, -1)
 QS = ['QTR1', 'QTR2', 'QTR3', 'QTR4']
 VALID_FORMS = ['10-K', '10-Q', '8-K']
