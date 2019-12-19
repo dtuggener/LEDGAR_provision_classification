@@ -1,11 +1,11 @@
-main usage: `python -m distilbert_baseline --data /path/to/your.jsonl --mode dev_or_test`
+main usage: `python -m distilbert_baseline --data /path/to/your.jsonl --mode train_or_test`
 
 Arguments:
 * `-h` or `--help`: show a help message and exit
 * `--data DATA`: Path to .jsonl file containing dataset. *Note* that if you follow the
 steps above the path will be relative to the repository directory, when in doubt, use
 absolute path
-* `--mode MODE`: which testing mode: 'dev' or 'test'
+* `--mode MODE`: which testing mode: 'train' or 'test'
 * `--use_class_weights USE_CLASS_WEIGHTS`: use balanced class weights for training, default True
 * `--seed SEED`: seed for random number generation, default 0xDEADBEEF
 * `--max_seq_len MAX_SEQ_LEN`: maximum sequence length in transformer, default 128

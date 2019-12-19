@@ -26,7 +26,7 @@ from tqdm import tqdm, trange
 import numpy as np
 
 from distilbert_data_utils import DonData, convert_examples_to_features
-from classification.utils import evaluate_multilabels
+from utils import evaluate_multilabels
 
 
 class DistilBertForMultilabelSequenceClassification(DistilBertPreTrainedModel):
