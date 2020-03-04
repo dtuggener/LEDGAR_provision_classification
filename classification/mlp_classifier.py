@@ -28,13 +28,16 @@ def build_model(x_train, num_classes):
 
 if __name__ == '__main__':
 
-    train_de = False
+    train_de = True
     test_de = True
     use_tfidf = False
     test_nda = False
 
-    model_name = 'MLP_avg_freq100.h5'
-    corpus_file = 'data/sec_corpus_2016-2019_clean_freq100.jsonl'
+    import sys
+    from pathlib import Path
+    corpus_file = sys.argv[1]
+    model_name = f'saved_models/MLP_avg_{Path(corpus_file).stem}.h5'
+    Path(model_name).parent.mkdir(parents=True, exist_ok=True)
 
     epochs = 50
     batch_size = 32
@@ -72,11 +75,11 @@ if __name__ == '__main__':
                       callbacks=[early_stopping])
         except KeyboardInterrupt:
             pass
-        model.save('saved_models/%s' % model_name, overwrite=True)
+        model.save(model_name, overwrite=True)
 
     else:
         print('Loading model')
-        model = keras.models.load_model('saved_models/%s' % model_name)
+        model = keras.models.load_model(model_name)
 
     if test_de:
         y_pred_bin_dev = model.predict(dev_x)

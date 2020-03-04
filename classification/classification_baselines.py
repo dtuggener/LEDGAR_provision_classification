@@ -68,12 +68,15 @@ def classify_by_labelname(x_test: List[str], y_train: List[List[str]],
 if __name__ == '__main__':
 
     predict_with_labelnames = False
-    do_train = False
+    do_train = True
     do_test = True
     test_prop_nda = False
 
-    corpus_file = '../sec_corpus_2016-2019_clean_freq100.jsonl'
-    classifier_file = 'saved_models/logreg_sec_clf_freq100.pkl'
+    import sys
+    from pathlib import Path
+    corpus_file = sys.argv[1]
+    classifier_file = f'saved_models/logreg_{Path(corpus_file).stem}.pkl'
+    Path(classifier_file).parent.mkdir(parents=True, exist_ok=True)
 
     print('Loading corpus from', corpus_file)
     dataset: SplitDataSet = split_corpus(corpus_file)

@@ -84,8 +84,11 @@ if __name__ == '__main__':
     do_test_nda = True
     classification_thresh = 0.5
 
-    corpus_file = 'data/sec_corpus_2016-2019_clean_proto.jsonl'
-    model_name = 'MLP_attn_proto.h5'
+    import sys
+    from pathlib import Path
+    corpus_file = sys.argv[1]
+    model_name = f'saved_models/MLP_avg_{Path(corpus_file).stem}.h5'
+    Path(model_name).parent.mkdir(parents=True, exist_ok=True)
 
     embedding_file = 'data/wiki.multi.en.vec_data.npy'
     vocab_file = 'data/wiki.multi.en.vec_vocab.json'
@@ -145,10 +148,10 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
 
-        model.save('saved_models/%s' % model_name, overwrite=True)
+        model.save(model_name, overwrite=True)
 
     else:
-        model = load_model('saved_models/%s' % model_name,
+        model = load_model(model_name,
                            custom_objects={'AttentionLayer': AttentionLayer})
 
     if do_test:

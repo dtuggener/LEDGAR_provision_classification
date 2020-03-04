@@ -113,7 +113,8 @@ def plot_label_name_vs_freq(y):
 
 if __name__ == '__main__':
 
-    corpus_file = 'sec_corpus_2016-2019_clean.jsonl'
+    import sys
+    corpus_file = sys.argv[1]
 
     x: List[str] = []
     y: List[List[str]] = []
