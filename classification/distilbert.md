@@ -2,9 +2,7 @@ main usage: `python -m distilbert_baseline --data /path/to/your.jsonl --mode tra
 
 Arguments:
 * `-h` or `--help`: show a help message and exit
-* `--data DATA`: Path to .jsonl file containing dataset. *Note* that if you follow the
-steps above the path will be relative to the repository directory, when in doubt, use
-absolute path
+* `--data DATA`: Path to .jsonl file containing dataset 
 * `--mode MODE`: which testing mode: 'train' or 'test'
 * `--use_class_weights USE_CLASS_WEIGHTS`: use balanced class weights for training, default True
 * `--seed SEED`: seed for random number generation, default 0xDEADBEEF
