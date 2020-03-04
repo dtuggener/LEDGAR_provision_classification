@@ -8,10 +8,10 @@ import re
 from collections import Counter
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import f1_score
-from keras.layers import Input, Embedding, Dense
-from keras.models import Model, load_model
-from keras.preprocessing.sequence import pad_sequences
-from keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Input, Embedding, Dense
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.callbacks import EarlyStopping
 from attn_layer import AttentionLayer
 from utils import embed, SplitDataSet, split_corpus, stringify_labels, \
     evaluate_multilabels, tune_clf_thresholds, calc_class_weights
@@ -79,9 +79,9 @@ def count_oovs(x):
 
 if __name__ == '__main__':
 
-    do_train = False
-    do_test = False
-    do_test_nda = True
+    do_train = True
+    do_test = True
+    do_test_nda = False
     classification_thresh = 0.5
 
     import sys
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     model_name = f'saved_models/MLP_avg_{Path(corpus_file).stem}.h5'
     Path(model_name).parent.mkdir(parents=True, exist_ok=True)
 
-    embedding_file = 'data/wiki.multi.en.vec_data.npy'
-    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+    embedding_file = sys.argv[2]
+    vocab_file = sys.argv[3]
 
     embeddings = numpy.load(embedding_file)
     vocab = json.load(open(vocab_file))

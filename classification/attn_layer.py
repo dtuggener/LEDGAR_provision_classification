@@ -1,11 +1,11 @@
 # from https://github.com/lzfelix/keras_attention/blob/master/attention/layers.py
 
-from keras import backend as K
-from keras import regularizers
-from keras import constraints
-from keras.layers import Layer
-from keras import initializers
-from keras import activations
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers
+from tensorflow.keras import constraints
+from tensorflow.keras.layers import Layer
+from tensorflow.keras import initializers
+from tensorflow.keras import activations
 
 
 class AttentionLayer(Layer):

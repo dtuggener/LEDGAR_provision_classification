@@ -54,8 +54,8 @@ if __name__ == '__main__':
     test_y = mlb.transform(dataset.y_test)
     dev_y = mlb.transform(dataset.y_dev)
 
-    embedding_file = 'data/wiki.multi.en.vec_data.npy'
-    vocab_file = 'data/wiki.multi.en.vec_vocab.json'
+    embedding_file = sys.argv[2]
+    vocab_file = sys.argv[3]
     embeddings = numpy.load(embedding_file)
     vocab_en = json.load(open(vocab_file))
     print('Preprocessing')
